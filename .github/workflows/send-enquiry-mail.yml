@@ -1,0 +1,52 @@
+# Sends the two admission emails for a single enquiry.
+#
+# The site is a Cloudflare Worker, which cannot open a raw SMTP connection, so
+# it dispatches this workflow with the enquiry sealed by a shared key instead of
+# sending anything itself. A runner has real sockets, so the send happens here.
+#
+# Required repository secrets:
+#   MAIL_PAYLOAD_KEY    same value as the Pages project's MAIL_PAYLOAD_KEY
+#   SMTP_USER           the mailbox that sends both emails
+#   SMTP_APP_PASSWORD   its app password
+# Optional: SMTP_HOST, SMTP_PORT, ADMISSIONS_EMAIL, EMAIL_LOGO_URL.
+#
+# Rotating the app password only means updating SMTP_APP_PASSWORD here; nothing
+# in this repository depends on its value.
+name: Send enquiry mail
+
+on:
+  workflow_dispatch:
+    inputs:
+      payload:
+        description: Sealed enquiry payload dispatched by the admissions form
+        required: true
+        type: string
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Send both emails
+        env:
+          MAIL_PAYLOAD: ${{ inputs.payload }}
+          MAIL_PAYLOAD_KEY: ${{ secrets.MAIL_PAYLOAD_KEY }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          ADMISSIONS_EMAIL: ${{ secrets.ADMISSIONS_EMAIL }}
+          EMAIL_LOGO_URL: ${{ secrets.EMAIL_LOGO_URL }}
+        run: npx --no-install tsx scripts/send-enquiry-mail.ts
