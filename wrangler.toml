@@ -5,3 +5,7 @@ compatibility_date = "2026-10-27"
 [vars]
 SITE_URL = "https://qr-aims.pages.dev"
 ADMISSIONS_EMAIL = "admissions@aims.ac.in"
+# Mail is sent by a GitHub Actions runner (README → "Mail sent by a GitHub
+# Actions runner"). GITHUB_DISPATCH_TOKEN is the secret that goes with it; with
+# no token set, the site falls back to Brevo or the relay.
+GITHUB_DISPATCH_REPO = "Needless64/aims-form-automation"
