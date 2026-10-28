@@ -89,6 +89,10 @@ async function getTransport(
     host: settings.host,
     port: settings.port,
     secure: settings.secure,
+    // On a STARTTLS port nodemailer would quietly fall back to plaintext if the
+    // server did not offer it. An enquiry carries a student's name, phone and
+    // email, so refuse to send that in the clear.
+    requireTLS: !settings.secure,
     auth: { user: settings.user, pass: settings.password },
     connectionTimeout: timeoutMs,
     greetingTimeout: timeoutMs,

@@ -97,6 +97,21 @@ describe("SMTP provider", () => {
     });
   });
 
+  it("requires STARTTLS on a plaintext port instead of falling back", async () => {
+    resetSmtpTransports();
+    await createSmtpProvider({
+      ...settings,
+      port: 587,
+      secure: false,
+    }).send(message);
+
+    expect(createTransportMock.mock.calls[0][0]).toMatchObject({
+      port: 587,
+      secure: false,
+      requireTLS: true,
+    });
+  });
+
   it("reuses one transport across sends", async () => {
     const provider = createSmtpProvider(settings);
     await provider.send(message);

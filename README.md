@@ -149,6 +149,13 @@ const SHEET_NAME = ''; // empty = the first tab of the spreadsheet
 const SENDER_NAME = 'AIMS Admissions';
 /** An enquiry is a few kilobytes; anything larger is not this form. */
 const MAX_BODY_LENGTH = 64 * 1024;
+/**
+ * Mail is sent by a GitHub runner, not through this script. Leave the relay off
+ * unless you deliberately use it: with it on, anyone who learns the secret can
+ * send mail from this Gmail account. Set it to true only for the
+ * EMAIL_WEBHOOK_URL transport.
+ */
+const ALLOW_MAIL_RELAY = false;
 
 /**
  * `===` stops at the first wrong character, so response timing hints at how
@@ -201,6 +208,9 @@ function doPost(e) {
       return reply({ ok: false, error: 'unauthorised' });
     }
     if (body.mail) {
+      if (!ALLOW_MAIL_RELAY) {
+        return reply({ ok: false, error: 'mail relay disabled' });
+      }
       return sendMail(body.mail);
     }
     return appendRow(body);
@@ -318,7 +328,8 @@ a new version before the mail function exists. `doGet` reports
 The deployed site uses `SHEETS_WEBHOOK_URL` and `SHEETS_WEBHOOK_SECRET` for rows.
 For mail, see "Mail sent by a GitHub Actions runner" below — that is the path the
 live site uses. The alternatives are Brevo (`BREVO_API_KEY`) and an Apps Script
-relay (`EMAIL_WEBHOOK_URL`, the same `/exec` URL and secret), and plain SMTP,
+relay (`EMAIL_WEBHOOK_URL`, the same `/exec` URL and secret, with
+`ALLOW_MAIL_RELAY = true` in the script), and plain SMTP,
 which only works on a Node host: a Worker has no raw sockets. `EMAIL_TRANSPORT`
 forces one of the four (`github`, `brevo`, `webhook`, `smtp`); otherwise a
 dispatch token wins, then a Brevo key, then a relay URL, then SMTP.
@@ -508,7 +519,7 @@ Only after the sending mailbox is configured:
 ## Reliability notes and limitations
 
 - **No database or durable queue.** Delivery status is kept in memory for 48 hours so the retry endpoint can avoid duplicate sends. A server restart, a second instance, or a serverless cold start loses this state. For production durability, persist enquiries and per-leg delivery states in a database (with a unique reference ID) and/or process failures through a queue. The current design intentionally avoids introducing infrastructure the project does not have.
-- **Rate limiting and the enquiry store are per instance.** Multi-instance deployments need a shared store (e.g. Redis or the database above). `x-forwarded-for` is trusted for client IPs; run behind a proxy that sets it.
+- **Rate limiting and the enquiry store are per instance.** Multi-instance deployments need a shared store (e.g. Redis or the database above). The per-address bucket keys on `cf-connecting-ip` — set and overwritten by Cloudflare, so it cannot be forged — then `x-real-ip`, and only last on `x-forwarded-for`; the address-independent ceiling applies whatever the header says.
 - **Server acceptance is not inbox delivery.** A successful SMTP handshake means the mail server took responsibility for the message, not that it reached the inbox or survived spam filtering. Consumer mailboxes (Gmail in particular) also cap how many messages a single account can send per day, and messages sent from a personal address look less trustworthy than a domain with SPF/DKIM/DMARC. No delivery guarantee is claimed in the UI or emails.
 - **An app password is a long-lived credential.** It grants full send access to that mailbox and is stored in the server environment. Use a dedicated mailbox rather than a personal account, keep `.env.local` out of version control, and revoke the password if the deployment is ever exposed.
 - **Retry after a partial failure is staff-initiated**, not available to the student, because resubmitting the form could duplicate the email leg that already succeeded.
@@ -516,7 +527,17 @@ Only after the sending mailbox is configured:
 - Email templates use table layouts, inline CSS, and mobile media queries. Dark-mode rendering varies by client; content remains readable.
 - **The brochure is a web-optimized copy.** `public/documents/aims-brochure.pdf` was produced from the 21.6 MB source export by capping embedded images at 96 dpi and re-encoding at JPEG quality 82, which keeps the pages visually equivalent at reading size while cutting the download to 4.1 MB. Replace it and the tile still works; update `BROCHURE.pages`/`sizeLabel` in `lib/institution.ts` (a test asserts they match the file).
 - **Video playback is third-party.** The modal loads the YouTube player from `youtube-nocookie.com`, so it needs network access and is subject to YouTube's embed and regional rules. Thumbnails are stored locally, so the section still looks right if the player is blocked.
-- **Nothing was deployed.** Deployment and the real mailbox credentials are still required.
+- **Deployed** at https://qr-aims.pages.dev on Cloudflare Pages, with the mail sent by the runner in `Needless64/aims-form-automation`.
+
+## Security
+
+- **In transit.** The site is HTTPS-only and now sends HSTS, a strict CSP (`default-src 'self'`, only `youtube-nocookie.com` framed), `frame-ancestors 'none'`, `nosniff` and a restrictive `Permissions-Policy`. SMTP runs with implicit TLS on 465, or with `requireTLS` on a STARTTLS port so it can never fall back to plaintext. Every outbound API call (GitHub, Sheets, Brevo) is HTTPS, and the Sheets and webhook endpoints are rejected at configuration time if they are not.
+- **Student data on the wire.** A dispatched enquiry is sealed with AES-256-GCM under `MAIL_PAYLOAD_KEY`, with a random IV per message and `aims-enquiry-v1` bound as additional data so a token cannot be replayed into another purpose. The workflow input, and therefore the public run page, contains only ciphertext.
+- **Student data at rest.** It lives in process memory for 48 hours so a failed leg can be retried, and in the college's own Google Sheet. No third-party CRM, mail vendor or analytics service receives it on the live path.
+- **The public API.** `POST /api/enquiries` caps the body at 16 KB, requires JSON, applies a honeypot, validates against a strict schema, refuses a browser `Origin` that is not the site itself, and answers with `Cache-Control: no-store` plus `nosniff` so no proxy can replay one student's reference to another. Only the reference ID and per-leg statuses are returned; configuration errors are logged internally and shown to the visitor as a generic message.
+- **The Apps Script.** Compares the shared secret in constant time, fails closed when no secret is set, caps the body at 64 KB, finger­prints the secret instead of revealing it or its length, locks the sheet while appending, refuses recipient values that could smuggle headers, and keeps the mail relay off by default — the runner sends the mail.
+- **Credentials.** `.env`, `.dev.vars` and `.env.local` are gitignored; the Pages secrets and repository secrets are the only copies, and the repo token is fine-grained with Actions only. Rotating the app password touches one repository secret; rotating `MAIL_PAYLOAD_KEY` touches both places; rotating `SHEETS_WEBHOOK_SECRET` touches the Pages project and the Apps Script.
+- **Residual risk.** The rate limiter is per isolate, so a determined flood is bounded rather than stopped; the fine-grained GitHub token should be narrowed to this one repository; and the GitHub run log is public, which is why the payload is sealed and the runner prints only a reference ID.
 
 ## Content sources
 
