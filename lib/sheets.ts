@@ -1,4 +1,5 @@
 import { formatIndianPhone } from "@/lib/email/fields";
+import { describeInterests } from "@/lib/institution";
 import { formatSubmissionTime } from "@/lib/reference";
 import type { Enquiry } from "@/lib/validation";
 
@@ -9,17 +10,17 @@ import type { Enquiry } from "@/lib/validation";
  */
 export const SHEET_COLUMNS = [
   "Reference ID",
-  "Received (IST)",
-  "Received (ISO 8601)",
+  "Submitted at (IST)",
+  "Submitted at (ISO 8601)",
   "Student name",
   "Email address",
   "Mobile number",
   "Programme of interest",
-  "City / district",
+  "Current city / district",
   "Current college / institution",
   "Areas of interest",
-  "Academic / career goals",
-  "Parent / guardian",
+  "Academic or career goals",
+  "Parent / guardian name",
   "Consent to be contacted",
   "Source",
 ] as const;
@@ -103,7 +104,7 @@ export function sheetRow({
     enquiry.programme,
     enquiry.city,
     enquiry.currentCollege,
-    enquiry.interests.join(", "),
+    describeInterests(enquiry.interests, enquiry.interestOther),
     enquiry.goals,
     enquiry.parentName,
     enquiry.consent ? "Yes" : "No",

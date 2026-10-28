@@ -10,7 +10,7 @@ Built with Next.js 16 (App Router), React 19, TypeScript, Zod, and Nodemailer ov
 
 - AIMS-branded responsive landing page using the official AIMS logo and campus imagery, with a minimal card-based layout and all enquiry CTAs pointing to the dedicated form page.
 - Four quick-link tiles under the hero — brochure, Instagram, admissions phone, campus map — plus a video section of four YouTube films about AIMS and the Arundathi Hospital.
-- Dedicated `/enquire` page set over the Arundathi Hospital photograph, with the form on a blue glass-morphism surface, a submit loading overlay, and an animated confirmation (drawn checkmark, pulsing ring, staggered reveal).
+- Dedicated `/enquire` page set over the Arundathi Hospital photograph, with the form on a blue glass-morphism surface, a submit loading overlay, and an animated confirmation (drawn checkmark, pulsing ring, staggered reveal) that scrolls itself into view and then returns the visitor to the home page after 10 seconds, on phones as well as desktops.
 - Institutional facts limited to verified information: established 2023, KNRUHS affiliation, NMC approval, counselling code AIMD, Dundigal campus.
 - Dedicated `/enquire` page with the admissions form: mandatory and optional medical-college-appropriate fields, client-side validation, server-side validation, and preserved values on failure.
 - Two separately tracked transactional emails:
@@ -21,11 +21,11 @@ Built with Next.js 16 (App Router), React 19, TypeScript, Zod, and Nodemailer ov
 - HTML escaping, header-value sanitization, and server-controlled recipients.
 - Partial-failure handling: a success response is returned only when **both** email requests are accepted by the provider.
 - Admin-protected retry endpoint that retries only the failed leg and never re-sends an accepted email.
-- Every enquiry field is required and strictly typed: text fields reject markup characters, phone numbers must be 10-digit Indian mobiles, the programme must be one of the published departments, and interests must come from the published list. The form is postgraduate-only: no undergraduate qualification, marks or NEET-UG fields are collected or recorded.
+- Every enquiry field is required and strictly typed: text fields reject markup characters, phone numbers must be 10-digit Indian mobiles, the programme must be one of the published departments, and interests must come from the published list — choosing "Others" also requires the candidate's own description, which is kept with their enquiry. The form is postgraduate-only: no undergraduate qualification, marks or NEET-UG fields are collected or recorded.
 - **Brochure tile**: on a desktop browser the PDF opens in the browser's own viewer in a new tab; on phones and tablets the same tile hands the file to the device download manager (`download` attribute, same-origin) with the file size and page count shown before the tap. The web copy is 4.1 MB rather than the 21.6 MB source export, with images capped at 96 dpi and re-encoded at JPEG quality 82 (visually equivalent at reading size).
 - **Video section**: click-to-play cards for four publicly embeddable YouTube videos, each opening an accessible modal (`role="dialog"`, focus trap, Escape and backdrop close, scroll lock) that loads the privacy-enhanced `youtube-nocookie.com` player and links back to YouTube. On phones the cards become a snap-scrolling row.
 - Instagram profile linked from the network tile; the LinkedIn company page remains linked from the footer.
-- 156 automated tests with the SMTP transport mocked and the GitHub dispatch stubbed.
+- 163 automated tests with the SMTP transport mocked and the GitHub dispatch stubbed.
 
 ## Project structure
 
@@ -126,16 +126,18 @@ Every accepted enquiry can be appended to a spreadsheet as one row, columns defi
 
 Rows go in through an Apps Script web app, so the sheet is never shared with a third party and no service-account key is stored in the project.
 
-1. Open the sheet, then **Extensions → Apps Script**.
-2. Replace the file contents with the script below and set `SHARED_SECRET` to a long random string.
+1. Open the sheet, then **Extensions → Apps Script**. (A standalone script from script.new works too — the script opens the spreadsheet by ID, not by being bound to it.)
+2. Replace the file contents with the script below. `SPREADSHEET_ID` already points at the admissions sheet; the Google account that deploys the script must have edit access to it. Set `SHARED_SECRET` to a long random string.
 3. **Deploy → New deployment → Web app**, *Execute as* **Me**, *Who has access* **Anyone**. Copy the `/exec` URL.
 4. In `.env.local`, set `SHEETS_WEBHOOK_URL` to that URL and `SHEETS_WEBHOOK_SECRET` to the same secret, then restart the dev server.
 
-**After a change to the columns**, open **Extensions → Apps Script**, choose
-`resetSheet` in the function list and press **Run**. It copies the current
-contents to a dated `Archive …` tab, clears the sheet and writes the current 14
-headings. From then on every enquiry rewrites row 1 if it ever differs from the
-site's column list, so the headings cannot drift again.
+**The headings look after themselves.** On every enquiry the script compares the
+tab with the column list the site just sent. If row 1 is different — a renamed
+column — or the tab is wider than that list, which is what rows written under an
+older layout leave behind, the whole tab is copied to a dated `Archive …` tab
+first, cleared, and relabelled. Nothing is ever destroyed and no value is left
+sitting under the wrong heading. `resetSheet` remains for running the same thing
+by hand from the editor (**Extensions → Apps Script → Run**).
 
 A row that never appears is nearly always a secret mismatch: `SHARED_SECRET` in the script and `SHEETS_WEBHOOK_SECRET` in `.env.local` must be identical character for character. The submission still succeeds for the student, but the response reports `recorded: "failed"` and the server log says `"spreadsheetError":"sheet_rejected"`. Changing the script needs a re-deploy (*Deploy → Manage deployments → Edit → Version: New version*) before the new value takes effect.
 
@@ -146,10 +148,11 @@ have no raw sockets and therefore cannot speak SMTP. One `/exec` URL serves both
 
 ```javascript
 /**
- * AIMS admissions — record enquiries in this spreadsheet and send the two
- * emails. Bound to the sheet (Extensions → Apps Script), so it can use the
- * active spreadsheet without an API key.
+ * AIMS admissions — record enquiries in the admissions spreadsheet and send the
+ * two emails. The spreadsheet is opened by ID, so the script works whether it
+ * lives in the sheet (Extensions → Apps Script) or on its own (script.new).
  */
+const SPREADSHEET_ID = '1Uj1MIei1cUff6l519dPlA7jfAVL7Xc-KbVecidgCqFw';
 const SHARED_SECRET = 'PASTE-A-LONG-RANDOM-STRING';
 const SHEET_NAME = ''; // empty = the first tab of the spreadsheet
 const SENDER_NAME = 'AIMS Admissions';
@@ -169,33 +172,27 @@ const ALLOW_MAIL_RELAY = false;
  */
 const HEADER = [
   'Reference ID',
-  'Received (IST)',
-  'Received (ISO 8601)',
+  'Submitted at (IST)',
+  'Submitted at (ISO 8601)',
   'Student name',
   'Email address',
   'Mobile number',
   'Programme of interest',
-  'City / district',
+  'Current city / district',
   'Current college / institution',
   'Areas of interest',
-  'Academic / career goals',
-  'Parent / guardian',
+  'Academic or career goals',
+  'Parent / guardian name',
   'Consent to be contacted',
   'Source',
 ];
 
 /**
- * One-time maintenance, run from the editor after a change to the columns:
- * archives whatever is there into a dated tab, clears the sheet, and writes the
- * current headings. Nothing is destroyed — a reset after a heading change would
- * otherwise leave older rows under the wrong columns, so they are preserved
- * intact in the archive instead.
+ * Copies the tab, contents and all, into a dated archive tab and empties it.
+ * Nothing is destroyed: rows written under an older column list would otherwise
+ * sit under the wrong headings, so they are preserved intact in the archive.
  */
-function resetSheet() {
-  const book = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet =
-    (SHEET_NAME && book.getSheetByName(SHEET_NAME)) || book.getSheets()[0];
-
+function archiveAndClear(book, sheet) {
   if (sheet.getLastRow() > 0) {
     const stamp = Utilities.formatDate(
       new Date(),
@@ -204,12 +201,40 @@ function resetSheet() {
     );
     sheet.copyTo(book).setName('Archive ' + stamp);
   }
-
   sheet.clear();
-  const headings = sheet.getRange(1, 1, 1, HEADER.length);
-  headings.setValues([HEADER]);
+}
+
+/** Writes row 1 from the list the site sent, and keeps it visible while scrolling. */
+function writeHeader(sheet, header) {
+  const headings = sheet.getRange(1, 1, 1, header.length);
+  headings.setValues([header]);
   headings.setFontWeight('bold');
   sheet.setFrozenRows(1);
+}
+
+/**
+ * False when the tab holds anything the site's column list cannot describe:
+ * more columns than headings (rows from an older layout), or a heading that no
+ * longer matches. Either way the tab is archived and relabelled before the next
+ * row is written, so a renamed column never shifts the values beneath it.
+ */
+function layoutMatches(sheet, header) {
+  if (sheet.getLastRow() === 0) return false;
+  if (sheet.getLastColumn() > header.length) return false;
+  const current = sheet.getRange(1, 1, 1, header.length).getValues()[0];
+  return header.every(
+    (value, index) => String(current[index] || '') === value,
+  );
+}
+
+/** The same reset, run by hand from the editor; the append path does it too. */
+function resetSheet() {
+  const book = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet =
+    (SHEET_NAME && book.getSheetByName(SHEET_NAME)) || book.getSheets()[0];
+
+  archiveAndClear(book, sheet);
+  writeHeader(sheet, HEADER);
   return reply({ ok: true, columns: HEADER.length });
 }
 
@@ -230,10 +255,11 @@ function secretMatches(provided, expected) {
 /** Opening the /exec URL reports whether the deployment is live. */
 function doGet() {
   try {
-    const book = SpreadsheetApp.getActiveSpreadsheet();
+    const book = SpreadsheetApp.openById(SPREADSHEET_ID);
     return reply({
       ok: true,
       script: 'aims-admissions',
+      spreadsheetId: SPREADSHEET_ID,
       secretSet: Boolean(SHARED_SECRET),
       // A fingerprint, not the secret and not its length: enough to check that
       // the value matches, useless to anyone who intercepts it.
@@ -326,31 +352,16 @@ function appendRow(body) {
   }
 
   try {
-    const book = SpreadsheetApp.getActiveSpreadsheet();
+    const book = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet =
       (SHEET_NAME && book.getSheetByName(SHEET_NAME)) || book.getSheets()[0];
 
-    // The column list lives in the site's code, so row 1 follows it. Rewriting
-    // it when it differs is what lets a column be removed without every later
-    // cell landing under the wrong heading.
-    const width = Math.max(sheet.getLastColumn(), body.header.length);
-    const current =
-      sheet.getLastRow() > 0
-        ? sheet.getRange(1, 1, 1, width).getValues()[0]
-        : [];
-    const matches =
-      current.length >= body.header.length &&
-      body.header.every((value, index) => current[index] === value) &&
-      current.slice(body.header.length).every((value) => value === '');
-
-    if (!matches) {
-      const header = body.header.concat(
-        new Array(Math.max(0, width - body.header.length)).fill(''),
-      );
-      const heading = sheet.getRange(1, 1, 1, width);
-      heading.setValues([header]);
-      heading.setFontWeight('bold');
-      sheet.setFrozenRows(1);
+    // The column list lives in the site's code, so the tab follows it. A tab
+    // written under an older list is archived first, then relabelled, so no
+    // value is ever left under the wrong heading.
+    if (!layoutMatches(sheet, body.header)) {
+      archiveAndClear(book, sheet);
+      writeHeader(sheet, body.header);
     }
 
     // Sheets evaluates a cell starting with =, +, - or @ as a formula, which is
@@ -390,7 +401,7 @@ which only works on a Node host: a Worker has no raw sockets. `EMAIL_TRANSPORT`
 forces one of the four (`github`, `brevo`, `webhook`, `smtp`); otherwise a
 dispatch token wins, then a Brevo key, then a relay URL, then SMTP.
 
-Every row carries the reference ID, the time in IST, the full submission, and `Source`. The mobile number is written as `91 98765 43210` rather than `+91 98765 43210`, because Sheets would read the leading `+` as a formula and show `#ERROR!` in the cell; the confirmation emails still show the `+` form. `SHEET_COLUMNS` is the single source of truth for the header: the script rewrites row 1 whenever it differs, so adding, removing or renaming a column relabels the sheet on the next enquiry instead of leaving values under the wrong headings. Re-deploying the script (*Deploy → Manage deployments → Edit → Version: New version*) is required after editing it.
+Every row carries the reference ID, the time in IST, the full submission, and `Source`. The mobile number is written as `91 98765 43210` rather than `+91 98765 43210`, because Sheets would read the leading `+` as a formula and show `#ERROR!` in the cell; the confirmation emails still show the `+` form. `SHEET_COLUMNS` is the single source of truth for the header: the script archives and relabels whenever row 1 differs or the tab is wider than the column list, so adding, removing or renaming a column leaves nothing under the wrong heading on the next enquiry. Re-deploying the script (*Deploy → Manage deployments → Edit → Version: New version*) is required after editing it.
 
 ## Deploy to Cloudflare Pages
 
@@ -506,7 +517,7 @@ than `next.config.ts`.
 
 Accepts `application/json` only, maximum 16 KB.
 
-Required: `fullName` (2–100 letters, spaces, hyphens, apostrophes), `email`, `phone` (10-digit Indian mobile, `+91`/leading zero accepted and normalised), `programme` (one of the published departments), `city` (2–80), `currentCollege` (2–120), `interests` (at least one listed area), `goals` (10–600 characters), `parentName` (2–100), and `consent` (must be the boolean `true`).
+Required: `fullName` (2–100 letters, spaces, hyphens, apostrophes), `email`, `phone` (10-digit Indian mobile, `+91`/leading zero accepted and normalised), `programme` (one of the published departments), `city` (2–80), `currentCollege` (2–120), `interests` (at least one listed area), `interestOther` (2–80 characters, required only when `interests` includes `"Others"`), `goals` (10–600 characters), `parentName` (2–100), and `consent` (must be the boolean `true`).
 Honeypot: `companyWebsite` must be empty.
 Origin: a browser POST whose `Origin` host differs from the request host is refused with `403` before it can spend a rate-limit slot.
 The undergraduate fields the form no longer asks for — `qualification`, `marks`, `neetStatus`, `neetScore`, and the old `course` key — are ignored if a stale client still sends them, so only the fields above are validated, emailed and recorded.
@@ -550,7 +561,7 @@ Only legs that failed are sent. If both emails were already accepted, the endpoi
 ## Testing
 
 ```bash
-npm test          # 77 tests, SMTP transport mocked
+npm test          # 163 tests, SMTP transport mocked
 npm run lint      # tsc --noEmit
 npm run build     # production build
 ```

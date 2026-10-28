@@ -1815,6 +1815,8 @@ textarea {
   border-radius: var(--radius-card);
   padding: 34px 36px 30px;
   box-shadow: var(--shadow-card);
+  /* Keeps the card clear of the sticky site header when it is scrolled to. */
+  scroll-margin-top: 92px;
 }
 
 .form-card__head {

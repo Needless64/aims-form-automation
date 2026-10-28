@@ -91,10 +91,10 @@ describe("spreadsheet row", () => {
     const row = sheetRow(input);
     expect(row).toHaveLength(SHEET_COLUMNS.length);
     expect(row[SHEET_COLUMNS.indexOf("Reference ID")]).toBe("AIMS-26-AB7K9Q");
-    expect(row[SHEET_COLUMNS.indexOf("Received (IST)")]).toBe(
+    expect(row[SHEET_COLUMNS.indexOf("Submitted at (IST)")]).toBe(
       "27 October 2026, 9:34 PM IST",
     );
-    expect(row[SHEET_COLUMNS.indexOf("Received (ISO 8601)")]).toBe(
+    expect(row[SHEET_COLUMNS.indexOf("Submitted at (ISO 8601)")]).toBe(
       "2026-10-27T16:04:28.414Z",
     );
     // No leading "+": Sheets would read it as a formula and show #ERROR!.
@@ -106,6 +106,20 @@ describe("spreadsheet row", () => {
       "General Medicine, Radiology",
     );
     expect(row[SHEET_COLUMNS.indexOf("Consent to be contacted")]).toBe("Yes");
+  });
+
+  it("keeps the candidate's own words when they pick \"Others\"", () => {
+    const row = sheetRow({
+      ...input,
+      enquiry: {
+        ...validEnquiry,
+        interests: ["Dermatology", "Others"],
+        interestOther: "Cardiology research",
+      },
+    });
+    expect(row[SHEET_COLUMNS.indexOf("Areas of interest")]).toBe(
+      "Dermatology, Others (Cardiology research)",
+    );
   });
 
   it("never writes a value Sheets would evaluate as a formula", () => {

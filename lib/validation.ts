@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { INTERESTS, PROGRAMMES } from "@/lib/institution";
+import { INTERESTS, OTHER_INTEREST, PROGRAMMES } from "@/lib/institution";
 
 export const HONEYPOT_FIELD = "companyWebsite";
 
@@ -114,6 +114,21 @@ export const enquirySchema = z
       .max(INTERESTS.length, {
         error: "Select only the listed areas of interest.",
       }),
+    /**
+     * The candidate's own words when they pick "Others". Optional on its own —
+     * the rule below makes it required for that one choice.
+     */
+    interestOther: z
+      .string({ error: "Tell us your other area of interest." })
+      .trim()
+      .max(80, {
+        error: "Describe your other area of interest in 80 characters or fewer.",
+      })
+      .refine((value) => !CONTROL_CHARS.test(value), {
+        error: "Your other area of interest contains invalid characters.",
+      })
+      .transform((value) => value.replace(/[ \t]+/g, " "))
+      .optional(),
     goals: requiredText({
       label: "your academic or career goals",
       max: 600,
@@ -124,6 +139,15 @@ export const enquirySchema = z
     consent: z.literal(true, {
       error: "Please consent to be contacted about your enquiry.",
     }),
+  })
+  .superRefine((value, ctx) => {
+    if (!value.interests.includes(OTHER_INTEREST)) return;
+    if ((value.interestOther ?? "").length >= 2) return;
+    ctx.addIssue({
+      code: "custom",
+      path: ["interestOther"],
+      message: "Tell us your other area of interest.",
+    });
   });
 
 export type Enquiry = z.infer<typeof enquirySchema>;

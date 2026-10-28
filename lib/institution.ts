@@ -63,6 +63,12 @@ export const PROGRAMMES = [
 
 export type Programme = (typeof PROGRAMMES)[number];
 
+/**
+ * The one option that is not self-describing, so the form asks the candidate to
+ * say what they mean and the ledger keeps their words.
+ */
+export const OTHER_INTEREST = "Others";
+
 /** The areas a candidate can say they are interested in working in. */
 export const INTERESTS = [
   "General Medicine",
@@ -71,6 +77,26 @@ export const INTERESTS = [
   "Obstetrics & Gynecology",
   "General Surgery / Orthopedics",
   "Radiology",
+  OTHER_INTEREST,
 ] as const;
 
 export type Interest = (typeof INTERESTS)[number];
+
+/**
+ * How the chosen areas read in an email or a spreadsheet cell. "Others" carries
+ * the candidate's own wording, so the admissions team is never left with a bare
+ * "Others" and no idea what it meant.
+ */
+export function describeInterests(
+  interests: readonly string[],
+  other?: string,
+): string {
+  const detail = other?.trim() ?? "";
+  return interests
+    .map((interest) =>
+      interest === OTHER_INTEREST && detail
+        ? `${OTHER_INTEREST} (${detail})`
+        : interest,
+    )
+    .join(", ");
+}

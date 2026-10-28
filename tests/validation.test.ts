@@ -159,6 +159,53 @@ describe("enquiry validation", () => {
     ).toBe(true);
   });
 
+  it("asks what \"Others\" means instead of recording a bare word", () => {
+    expect(
+      enquirySchema.safeParse(
+        minimalRequestBody({ interests: ["Others"] }),
+      ).success,
+    ).toBe(false);
+
+    const blankWithOthers = enquirySchema.safeParse(
+      minimalRequestBody({ interests: ["Others"], interestOther: "   " }),
+    );
+    expect(blankWithOthers.success).toBe(false);
+    if (!blankWithOthers.success) {
+      expect(
+        Object.keys(formatFieldErrors(blankWithOthers.error)),
+      ).toContain("interestOther");
+    }
+
+    const described = enquirySchema.safeParse(
+      minimalRequestBody({
+        interests: ["General Medicine", "Others"],
+        interestOther: "  Cardiology   research ",
+      }),
+    );
+    expect(described.success).toBe(true);
+    if (described.success) {
+      expect(described.data.interestOther).toBe("Cardiology research");
+    }
+  });
+
+  it("ignores the \"Others\" description when that option is not chosen", () => {
+    const result = enquirySchema.safeParse(
+      minimalRequestBody({ interests: ["Radiology"], interestOther: "Oncology" }),
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it("caps the \"Others\" description", () => {
+    expect(
+      enquirySchema.safeParse(
+        minimalRequestBody({
+          interests: ["Others"],
+          interestOther: "x".repeat(81),
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
   it("rejects overlong text", () => {
     expect(
       enquirySchema.safeParse(minimalRequestBody({ goals: "x".repeat(601) })).success,

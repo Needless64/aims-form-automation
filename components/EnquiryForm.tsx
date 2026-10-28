@@ -1,12 +1,17 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   INSTITUTION,
   INTERESTS,
+  OTHER_INTEREST,
   PROGRAMMES,
   type Interest,
 } from "@/lib/institution";
+
+/** How long the confirmation stays on screen before the visitor is taken home. */
+const HOME_REDIRECT_SECONDS = 10;
 
 interface FormValues {
   fullName: string;
@@ -16,6 +21,7 @@ interface FormValues {
   city: string;
   currentCollege: string;
   interests: Interest[];
+  interestOther: string;
   goals: string;
   parentName: string;
   consent: boolean;
@@ -44,6 +50,7 @@ const INITIAL_VALUES: FormValues = {
   city: "",
   currentCollege: "",
   interests: [],
+  interestOther: "",
   goals: "",
   parentName: "",
   consent: false,
@@ -123,6 +130,12 @@ function validate(values: FormValues): Errors {
   if (values.interests.length === 0) {
     errors.interests = "Select at least one area of interest.";
   }
+  if (
+    values.interests.includes(OTHER_INTEREST) &&
+    values.interestOther.trim().length < 2
+  ) {
+    errors.interestOther = "Tell us your other area of interest.";
+  }
   if (values.goals.trim().length < 10) {
     errors.goals = "Please describe your academic or career goals.";
   }
@@ -152,10 +165,32 @@ export function EnquiryForm() {
   const [failure, setFailure] = useState<FailureState | null>(null);
   const successHeading = useRef<HTMLHeadingElement>(null);
   const alertRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
+  /**
+   * Brings the result of a submission into view. The visitor is at the submit
+   * button at the bottom of a long form, so without this the confirmation — or
+   * the reason the form was rejected — appears off-screen and the page looks
+   * unchanged. `scroll-margin-top` on .form-card keeps it clear of the sticky
+   * header, which would otherwise cover the heading.
+   */
+  function revealCard() {
+    cardRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+
+  // Once submitted, show the confirmation and then return the visitor home, on
+  // a phone as well as on a desktop.
   useEffect(() => {
-    if (success) successHeading.current?.focus();
-  }, [success]);
+    if (!success) return;
+    revealCard();
+    successHeading.current?.focus({ preventScroll: true });
+    const timer = window.setTimeout(
+      () => router.push("/"),
+      HOME_REDIRECT_SECONDS * 1000,
+    );
+    return () => window.clearTimeout(timer);
+  }, [success, router]);
 
   function update<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     const mask = INPUT_MASKS[key];
@@ -194,10 +229,10 @@ export function EnquiryForm() {
 
     const nextErrors = validate(values);
     if (Object.keys(nextErrors).length > 0) {
-      setErrors(nextErrors);
-      setFailure({
-        message: "Please check the highlighted fields and try again.",
-      });
+      setErrors(nextErrors);            setFailure({
+              message: "Please check the highlighted fields and try again.",
+            });
+            requestAnimationFrame(revealCard);
       const first = Object.keys(nextErrors)[0];
       requestAnimationFrame(() => document.getElementById(first)?.focus());
       return;
@@ -215,6 +250,9 @@ export function EnquiryForm() {
       city: values.city,
       currentCollege: values.currentCollege,
       interests: values.interests,
+      interestOther: values.interests.includes(OTHER_INTEREST)
+        ? values.interestOther
+        : "",
       goals: values.goals,
       parentName: values.parentName,
       consent: values.consent,
@@ -263,12 +301,18 @@ export function EnquiryForm() {
         referenceId: data?.referenceId,
         partial: Boolean(data?.partial),
       });
-      requestAnimationFrame(() => alertRef.current?.focus());
+      requestAnimationFrame(() => {
+        alertRef.current?.focus({ preventScroll: true });
+        revealCard();
+      });
     } catch {
       setFailure({
         message: `We could not reach the admissions server. Please check your connection and try again, or call ${INSTITUTION.phone}.`,
       });
-      requestAnimationFrame(() => alertRef.current?.focus());
+      requestAnimationFrame(() => {
+        alertRef.current?.focus({ preventScroll: true });
+        revealCard();
+      });
     } finally {
       setSubmitting(false);
     }
@@ -276,7 +320,7 @@ export function EnquiryForm() {
 
   if (success) {
     return (
-      <div className="form-card form-card--success">
+      <div className="form-card form-card--success" ref={cardRef}>
         <div className="success" role="status" aria-live="polite">
           <div className="success__badge" aria-hidden="true">
             <span className="success__ring" />
@@ -321,6 +365,10 @@ export function EnquiryForm() {
               Please quote your reference ID in any call or email about this
               enquiry.
             </li>
+            <li>
+              You will be taken back to the AIMS home page in{" "}
+              {HOME_REDIRECT_SECONDS} seconds.
+            </li>
           </ul>
 
           <div className="success__actions">
@@ -344,6 +392,7 @@ export function EnquiryForm() {
   return (
     <div
       className="form-card"
+      ref={cardRef}
       aria-busy={submitting}
       data-submitting={submitting ? "true" : undefined}
     >
@@ -586,6 +635,36 @@ export function EnquiryForm() {
               <span className="field__error" id="interests-error">
                 {errors.interests}
               </span>
+            ) : null}
+
+            {values.interests.includes(OTHER_INTEREST) ? (
+              <div className="field" style={{ marginTop: 10 }}>
+                <label htmlFor="interestOther">
+                  Please specify your other area of interest{" "}
+                  <span className="req">*</span>
+                </label>
+                <input
+                  id="interestOther"
+                  name="interestOther"
+                  type="text"
+                  maxLength={80}
+                  required
+                  value={values.interestOther}
+                  onChange={(event) =>
+                    update("interestOther", event.target.value)
+                  }
+                  aria-invalid={Boolean(errors.interestOther)}
+                  aria-describedby={
+                    errors.interestOther ? "interestOther-error" : undefined
+                  }
+                  placeholder="e.g. Cardiology research"
+                />
+                {errors.interestOther ? (
+                  <span className="field__error" id="interestOther-error">
+                    {errors.interestOther}
+                  </span>
+                ) : null}
+              </div>
             ) : null}
           </div>
 

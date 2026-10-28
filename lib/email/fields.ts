@@ -1,4 +1,5 @@
 import type { DetailField } from "@/lib/email/components";
+import { describeInterests } from "@/lib/institution";
 import type { Enquiry } from "@/lib/validation";
 
 export function formatIndianPhone(digits: string): string {
@@ -18,7 +19,9 @@ export function studentDetailFields(
     { label: "Current college / institution", value: enquiry.currentCollege },
     {
       label: "Areas of interest",
-      value: enquiry.interests.length ? enquiry.interests.join(", ") : undefined,
+      value: enquiry.interests.length
+        ? describeInterests(enquiry.interests, enquiry.interestOther)
+        : undefined,
     },
     { label: "Academic / career goals", value: enquiry.goals },
     { label: "Parent / guardian", value: enquiry.parentName },
