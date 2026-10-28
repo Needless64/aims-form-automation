@@ -1,6 +1,6 @@
 // The runner that sends the mail lives in a public repository, so the enquiry
 // cannot travel in clear text: a dispatch input and its run are world-readable,
-// and student names, phone numbers and NEET scores are not ours to publish.
+// and student names, phone numbers and email addresses are not ours to publish.
 // The site seals the payload with a shared key and the runner opens it.
 //
 // Only WebCrypto is used, so the same code runs in a Worker and on Node.

@@ -41,46 +41,36 @@ export const BROCHURE = {
 } as const;
 
 /**
- * Programme names exactly as listed in the official AIMS "Programs Offered"
- * navigation. MBBS is the primary undergraduate programme.
+ * Departments of the college and its teaching hospital, in the order the
+ * institution publishes them. An enquiry names the department the candidate
+ * wants to join, so this is the programme they are asking about.
  */
-export const COURSES = [
-  "MBBS",
-  "Nursing & Allied Health",
-  "Paramedical Diplomas",
+export const PROGRAMMES = [
+  "General Medicine",
+  "Dermatology",
+  "Paediatrics",
+  "Respiratory Medicine",
+  "General Surgery",
+  "Orthopaedics",
+  "Obstetric & Gynaecology",
+  "Ophthalmology",
+  "Oto – Rhinolaryngology / ENT",
+  "Radiology",
+  "Anaesthesia",
+  "Biochemistry",
+  "Pathology",
 ] as const;
 
-export type Course = (typeof COURSES)[number];
+export type Programme = (typeof PROGRAMMES)[number];
 
-export const COURSE_LABELS: Record<Course, string> = {
-  MBBS: "MBBS — Bachelor of Medicine and Bachelor of Surgery",
-  "Nursing & Allied Health": "Nursing & Allied Health",
-  "Paramedical Diplomas": "Paramedical Diplomas",
-};
-
-export const QUALIFICATIONS = [
-  "12th / Intermediate — completed",
-  "12th / Intermediate — pursuing",
-  "Bachelor's degree",
-  "Other",
-] as const;
-
-export type Qualification = (typeof QUALIFICATIONS)[number];
-
-export const NEET_STATUSES = [
-  "Appeared",
-  "Not appeared",
-  "Planning to appear",
-] as const;
-
-export type NeetStatus = (typeof NEET_STATUSES)[number];
-
+/** The areas a candidate can say they are interested in working in. */
 export const INTERESTS = [
-  "Clinical practice",
-  "Medical research",
-  "Community health",
-  "Medical education",
-  "Hospital administration",
+  "General Medicine",
+  "Pediatrics",
+  "Dermatology",
+  "Obstetrics & Gynecology",
+  "General Surgery / Orthopedics",
+  "Radiology",
 ] as const;
 
 export type Interest = (typeof INTERESTS)[number];

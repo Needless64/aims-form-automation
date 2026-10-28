@@ -17,11 +17,11 @@ Built with Next.js 16 (App Router), React 19, TypeScript, Zod, and Nodemailer ov
   - **Student confirmation** — personalized, includes the submitted details, reference ID, AIMS information, virtual tour link, and contact details.
   - **Admissions notification** — administrative layout with the full submission, submission time in IST, consent status, and Reply-To set to the student.
 - Reference IDs formatted `AIMS-26-XXXXXX` (ambiguous characters excluded).
-- Honeypot spam field, 16 KB request-size limit, per-IP rate limiting (5 enquiries / 10 minutes), and generic bot rejection.
+- Honeypot spam field, 16 KB request-size limit, per-IP rate limiting (5 enquiries / 10 minutes), a second address-independent ceiling (30 / 10 minutes) that survives forged forwarding headers, same-origin checks on browser submissions, and generic bot rejection.
 - HTML escaping, header-value sanitization, and server-controlled recipients.
 - Partial-failure handling: a success response is returned only when **both** email requests are accepted by the provider.
 - Admin-protected retry endpoint that retries only the failed leg and never re-sends an accepted email.
-- Every enquiry field is required and strictly typed: text fields reject markup characters, phone numbers must be 10-digit Indian mobiles, marks must be a 0–100 percentage, NEET score must be a whole number out of 720 (required only when the candidate appeared), and interests must come from the published list.
+- Every enquiry field is required and strictly typed: text fields reject markup characters, phone numbers must be 10-digit Indian mobiles, the programme must be one of the published departments, and interests must come from the published list. The form is postgraduate-only: no undergraduate qualification, marks or NEET-UG fields are collected or recorded.
 - **Brochure tile**: on a desktop browser the PDF opens in the browser's own viewer in a new tab; on phones and tablets the same tile hands the file to the device download manager (`download` attribute, same-origin) with the file size and page count shown before the tap. The web copy is 4.1 MB rather than the 21.6 MB source export, with images capped at 96 dpi and re-encoded at JPEG quality 82 (visually equivalent at reading size).
 - **Video section**: click-to-play cards for four publicly embeddable YouTube videos, each opening an accessible modal (`role="dialog"`, focus trap, Escape and backdrop close, scroll lock) that loads the privacy-enhanced `youtube-nocookie.com` player and links back to YouTube. On phones the cards become a snap-scrolling row.
 - Instagram profile linked from the network tile; the LinkedIn company page remains linked from the footer.
@@ -133,7 +133,7 @@ Rows go in through an Apps Script web app, so the sheet is never shared with a t
 
 A row that never appears is nearly always a secret mismatch: `SHARED_SECRET` in the script and `SHEETS_WEBHOOK_SECRET` in `.env.local` must be identical character for character. The submission still succeeds for the student, but the response reports `recorded: "failed"` and the server log says `"spreadsheetError":"sheet_rejected"`. Changing the script needs a re-deploy (*Deploy → Manage deployments → Edit → Version: New version*) before the new value takes effect.
 
-To check the two values agree without exposing either, open the `/exec` URL in a browser. The script answers with `{"ok":true,"secretSet":true,"secretLength":43,"sheet":"Sheet1"}`; if `secretLength` differs from the length of `SHEETS_WEBHOOK_SECRET`, the values cannot match and the secret line needs re-pasting.
+To check the two values agree without exposing either, open the `/exec` URL in a browser. The script answers with `{"ok":true,"secretSet":true,"secretFingerprint":"5f3c9a11","sheet":"Sheet1"}`, the first eight hex characters of the secret's SHA-256. Compare it with `printf %s "$SHEETS_WEBHOOK_SECRET" | sha256sum | cut -c1-8`; if they differ, the values cannot match and the secret line needs re-pasting. The secret itself is never returned.
 
 The same deployment also relays the outgoing email, because Cloudflare Workers
 have no raw sockets and therefore cannot speak SMTP. One `/exec` URL serves both.
@@ -147,6 +147,22 @@ have no raw sockets and therefore cannot speak SMTP. One `/exec` URL serves both
 const SHARED_SECRET = 'PASTE-A-LONG-RANDOM-STRING';
 const SHEET_NAME = ''; // empty = the first tab of the spreadsheet
 const SENDER_NAME = 'AIMS Admissions';
+/** An enquiry is a few kilobytes; anything larger is not this form. */
+const MAX_BODY_LENGTH = 64 * 1024;
+
+/**
+ * `===` stops at the first wrong character, so response timing hints at how
+ * much of a guess was right. This walks the whole value either way.
+ */
+function secretMatches(provided, expected) {
+  const given = String(provided || '');
+  if (given.length !== expected.length) return false;
+  let difference = 0;
+  for (let index = 0; index < expected.length; index += 1) {
+    difference |= given.charCodeAt(index) ^ expected.charCodeAt(index);
+  }
+  return difference === 0;
+}
 
 /** Opening the /exec URL reports whether the deployment is live. */
 function doGet() {
@@ -156,7 +172,15 @@ function doGet() {
       ok: true,
       script: 'aims-admissions',
       secretSet: Boolean(SHARED_SECRET),
-      secretLength: SHARED_SECRET.length,
+      // A fingerprint, not the secret and not its length: enough to check that
+      // the value matches, useless to anyone who intercepts it.
+      secretFingerprint: Utilities.computeDigest(
+        Utilities.DigestAlgorithm.SHA_256,
+        SHARED_SECRET,
+      )
+        .slice(0, 4)
+        .map((byte) => (byte & 0xff).toString(16).padStart(2, '0'))
+        .join(''),
       sheet: book ? book.getName() : '(not bound to a spreadsheet)',
       mailQuotaRemaining: MailApp.getRemainingDailyQuota(),
     });
@@ -167,8 +191,13 @@ function doGet() {
 
 function doPost(e) {
   try {
-    const body = JSON.parse(e.postData.contents);
-    if (SHARED_SECRET && body.token !== SHARED_SECRET) {
+    const contents = e && e.postData ? e.postData.contents : '';
+    if (typeof contents !== 'string' || contents.length > MAX_BODY_LENGTH) {
+      return reply({ ok: false, error: 'payload too large' });
+    }
+    const body = JSON.parse(contents);
+    // Fail closed: a deployment with no secret set accepts nothing at all.
+    if (!SHARED_SECRET || !secretMatches(body.token, SHARED_SECRET)) {
       return reply({ ok: false, error: 'unauthorised' });
     }
     if (body.mail) {
@@ -185,15 +214,29 @@ function doPost(e) {
  * calls instead of SMTP. Quota is the account's own: 100 recipients a day on
  * consumer Gmail, 1500 on Google Workspace.
  */
+/** One bare address; anything carrying angles, commas or newlines is refused. */
+function address(value) {
+  return typeof value === 'string' &&
+    /^[^\s<>,;"]+@[^\s<>,;"]+\.[^\s<>,;"]+$/.test(value)
+    ? value
+    : '';
+}
+
 function sendMail(mail) {
-  if (!mail || !mail.to || !mail.subject) {
+  const to = mail ? address(mail.to) : '';
+  const replyTo = mail && mail.replyTo ? address(mail.replyTo) : '';
+  if (!to || !mail.subject) {
+    return reply({ ok: false, error: 'malformed mail' });
+  }
+  if (mail.replyTo && !replyTo) {
+    // A header smuggled in through the recipient is refused outright.
     return reply({ ok: false, error: 'malformed mail' });
   }
   try {
-    MailApp.sendEmail(mail.to, mail.subject, mail.text || '', {
-      name: mail.name || SENDER_NAME,
+    MailApp.sendEmail(to, mail.subject, mail.text || '', {
+      name: SENDER_NAME,
       htmlBody: mail.html,
-      ...(mail.replyTo ? { replyTo: mail.replyTo } : {}),
+      ...(replyTo ? { replyTo: replyTo } : {}),
     });
     return reply({ ok: true, id: 'relay-' + Date.now() });
   } catch (error) {
@@ -202,31 +245,62 @@ function sendMail(mail) {
 }
 
 function appendRow(body) {
-  if (!Array.isArray(body.header) || !Array.isArray(body.values)) {
+  if (
+    !Array.isArray(body.header) ||
+    !Array.isArray(body.values) ||
+    body.header.length !== body.values.length
+  ) {
     return reply({ ok: false, error: 'malformed payload' });
   }
 
-  const book = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet =
-    (SHEET_NAME && book.getSheetByName(SHEET_NAME)) || book.getSheets()[0];
-
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(body.header);
-    sheet.getRange(1, 1, 1, body.header.length).setFontWeight('bold');
-    sheet.setFrozenRows(1);
+  // Two enquiries can land together; without a lock their rows can interleave.
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) {
+    return reply({ ok: false, error: 'busy' });
   }
 
-  // Sheets evaluates a cell starting with =, +, - or @ as a formula, which is
-  // how "+91 98765 43210" turns into #ERROR!. Format those cells as text.
-  const range = sheet.getRange(sheet.getLastRow() + 1, 1, 1, body.values.length);
-  body.values.forEach((value, index) => {
-    if (/^[=+\-@]/.test(String(value))) {
-      range.getCell(1, index + 1).setNumberFormat('@');
-    }
-  });
-  range.setValues([body.values]);
+  try {
+    const book = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet =
+      (SHEET_NAME && book.getSheetByName(SHEET_NAME)) || book.getSheets()[0];
 
-  return reply({ ok: true, row: sheet.getLastRow() });
+    // The column list lives in the site's code, so row 1 follows it. Rewriting
+    // it when it differs is what lets a column be removed without every later
+    // cell landing under the wrong heading.
+    const width = Math.max(sheet.getLastColumn(), body.header.length);
+    const current =
+      sheet.getLastRow() > 0
+        ? sheet.getRange(1, 1, 1, width).getValues()[0]
+        : [];
+    const matches =
+      current.length >= body.header.length &&
+      body.header.every((value, index) => current[index] === value) &&
+      current.slice(body.header.length).every((value) => value === '');
+
+    if (!matches) {
+      const header = body.header.concat(
+        new Array(Math.max(0, width - body.header.length)).fill(''),
+      );
+      const heading = sheet.getRange(1, 1, 1, width);
+      heading.setValues([header]);
+      heading.setFontWeight('bold');
+      sheet.setFrozenRows(1);
+    }
+
+    // Sheets evaluates a cell starting with =, +, - or @ as a formula, which is
+    // how "+91 98765 43210" turns into #ERROR!. Format those cells as text.
+    const range = sheet.getRange(sheet.getLastRow() + 1, 1, 1, body.values.length);
+    body.values.forEach((value, index) => {
+      if (/^[=+\-@]/.test(String(value))) {
+        range.getCell(1, index + 1).setNumberFormat('@');
+      }
+    });
+    range.setValues([body.values]);
+
+    return reply({ ok: true, row: sheet.getLastRow() });
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function reply(payload) {
@@ -249,7 +323,7 @@ which only works on a Node host: a Worker has no raw sockets. `EMAIL_TRANSPORT`
 forces one of the four (`github`, `brevo`, `webhook`, `smtp`); otherwise a
 dispatch token wins, then a Brevo key, then a relay URL, then SMTP.
 
-Every row carries the reference ID, the time in IST, the full submission, and `Source`. The mobile number is written as `91 98765 43210` rather than `+91 98765 43210`, because Sheets would read the leading `+` as a formula and show `#ERROR!` in the cell; the confirmation emails still show the `+` form. Only ever add columns to `SHEET_COLUMNS`: the script writes the header from it, so reordering or removing a column would shift every later row out of line with the existing data. Re-deploying the script (*Deploy → Manage deployments → Edit → Version: New version*) is required after editing it.
+Every row carries the reference ID, the time in IST, the full submission, and `Source`. The mobile number is written as `91 98765 43210` rather than `+91 98765 43210`, because Sheets would read the leading `+` as a formula and show `#ERROR!` in the cell; the confirmation emails still show the `+` form. `SHEET_COLUMNS` is the single source of truth for the header: the script rewrites row 1 whenever it differs, so adding, removing or renaming a column relabels the sheet on the next enquiry instead of leaving values under the wrong headings. Re-deploying the script (*Deploy → Manage deployments → Edit → Version: New version*) is required after editing it.
 
 ## Deploy to Cloudflare Pages
 
@@ -297,8 +371,8 @@ mailbox credentials already in use here, so the send happens there:
 
 That repository is **public**, which is why the payload is sealed: a
 `workflow_dispatch` run and its inputs are readable by anyone, and student names,
-numbers and NEET scores are not ours to publish. Nothing in the run prints the
-enquiry — only its reference ID and the outcome of each leg.
+numbers and email addresses are not ours to publish. Nothing in the run prints
+the enquiry — only its reference ID and the outcome of each leg.
 
 Set-up, once:
 
@@ -365,9 +439,10 @@ than `next.config.ts`.
 
 Accepts `application/json` only, maximum 16 KB.
 
-Required: `fullName` (2–100 letters, spaces, hyphens, apostrophes), `email`, `phone` (10-digit Indian mobile, `+91`/leading zero accepted and normalised), `course` (listed programme), `city` (2–80), `currentCollege` (2–120), `qualification` (listed value), `marks` (number 0–100, `92.4` and `92.4%` accepted and stored as `92.4%`), `neetStatus` (listed value), `interests` (at least one listed area), `goals` (10–600 characters), `parentName` (2–100), and `consent` (must be the boolean `true`).
-Conditional: `neetScore` is required as a whole number 0–720 when `neetStatus` is `Appeared`, and left empty otherwise.
+Required: `fullName` (2–100 letters, spaces, hyphens, apostrophes), `email`, `phone` (10-digit Indian mobile, `+91`/leading zero accepted and normalised), `programme` (one of the published departments), `city` (2–80), `currentCollege` (2–120), `interests` (at least one listed area), `goals` (10–600 characters), `parentName` (2–100), and `consent` (must be the boolean `true`).
 Honeypot: `companyWebsite` must be empty.
+Origin: a browser POST whose `Origin` host differs from the request host is refused with `403` before it can spend a rate-limit slot.
+The undergraduate fields the form no longer asks for — `qualification`, `marks`, `neetStatus`, `neetScore`, and the old `course` key — are ignored if a stale client still sends them, so only the fields above are validated, emailed and recorded.
 
 Every field is a string or boolean of the declared type; numeric JSON values, arrays where a string is expected, unknown enum values, and markup characters in name/place fields are rejected with `422`.
 
@@ -413,7 +488,7 @@ npm run lint      # tsc --noEmit
 npm run build     # production build
 ```
 
-The suite covers validation (every field required, strict types, invalid email/phone/marks/NEET score, markup rejection, normalization), SMTP configuration presets and failures, reference generation and IST timestamps, HTML escaping and header injection, both templates (recipient content, conditional fields, consistent reference IDs, mobile/table structure, plain-text alternatives), provider request shape and error mapping, student/admissions recipient correctness, Reply-To, both-email success, each single-leg failure, total failure, duplicate retry prevention, rate limiting, honeypot rejection, size limits, and missing email configuration.
+The suite covers validation (every field required, strict types, invalid email/phone, unlisted departments and interests, markup rejection, normalization, dropped UG fields), SMTP configuration presets and failures, reference generation and IST timestamps, HTML escaping and header injection, both templates (recipient content, conditional fields, consistent reference IDs, mobile/table structure, plain-text alternatives), provider request shape and error mapping, student/admissions recipient correctness, Reply-To, both-email success, each single-leg failure, total failure, duplicate retry prevention, rate limiting, honeypot rejection, size limits, and missing email configuration.
 
 No automated test opens an SMTP connection or sends mail to `admissions@aims.ac.in`; Nodemailer's transport is replaced with a mock.
 
@@ -447,7 +522,7 @@ Only after the sending mailbox is configured:
 
 - Institutional identity, logo, campus and hospital imagery: https://www.aims.ac.in/
 - Counselling code AIMD, admissions phone `9000994842`, and `admissions@aims.ac.in`: supplied admissions details for 2026–27.
-- Programme list: the official AIMS "Programs Offered" navigation lists Undergraduate (MBBS), Nursing & Allied Health, and Paramedical Diplomas. MBBS is presented as the primary programme; no other courses, fees, seat counts, rankings, placements, scholarships, or facilities claims were invented.
+- Programme list: AIMS admits postgraduate medical students, so the enquiry form offers the thirteen departments published by the institution (General Medicine through Pathology). No fees, seat counts, rankings, placements, scholarships, or facilities claims were invented.
 - Instagram profile: https://www.instagram.com/aimsmedicalcollege/
 - LinkedIn company page: https://www.linkedin.com/company/arundathi-institute-of-medical-sciences/
 - Brochure PDF: supplied institute brochure (source export `aims-brochure.pdf`), published under `/documents/aims-brochure.pdf`.

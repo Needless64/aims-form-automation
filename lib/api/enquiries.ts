@@ -7,7 +7,10 @@ import { deliverEnquiry } from "@/lib/email/dispatch";
 import { EmailConfigurationError, getEmailConfig } from "@/lib/email/config";
 import { isSettled, type DeliveryReport } from "@/lib/email/service";
 import { INSTITUTION } from "@/lib/institution";
-import { enquiryRateLimiter } from "@/lib/rate-limit";
+import {
+  enquiryGlobalRateLimiter,
+  enquiryRateLimiter,
+} from "@/lib/rate-limit";
 import { formatSubmissionTime, generateReferenceId } from "@/lib/reference";
 import { recordEnquiryIfConfigured, type SheetRecordState } from "@/lib/sheets";
 import {
@@ -17,6 +20,21 @@ import {
 } from "@/lib/validation";
 
 const MAX_BODY_BYTES = 16 * 1024;
+
+/**
+ * A browser puts Origin on every cross-site POST, so a request claiming to come
+ * from another site never was this form. Requests without the header — curl, a
+ * server-side probe — are left to the honeypot and the limiter.
+ */
+function foreignOrigin(request: Request): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) return false;
+  try {
+    return new URL(origin).host !== new URL(request.url).host;
+  } catch {
+    return true;
+  }
+}
 
 function logDelivery(referenceId: string, deliveries: DeliveryReport) {
   console.info(
@@ -53,9 +71,16 @@ export async function handleEnquiry(
   request: Request,
   env: ServerEnv = process.env,
 ): Promise<Response> {
+  if (foreignOrigin(request)) {
+    return json({ ok: false, error: "forbidden_origin" }, { status: 403 });
+  }
+
   const ip = clientIp(request);
   const rate = enquiryRateLimiter(ip);
-  if (!rate.allowed) {
+  // Two buckets: this address, and every address together. Neither alone
+  // bounds the mailbox, because a forged address can be changed per request.
+  const overall = enquiryGlobalRateLimiter("all");
+  if (!rate.allowed || !overall.allowed) {
     return json(
       {
         ok: false,
@@ -65,7 +90,11 @@ export async function handleEnquiry(
       },
       {
         status: 429,
-        headers: { "Retry-After": String(rate.retryAfterSeconds) },
+        headers: {
+          "Retry-After": String(
+            Math.max(rate.retryAfterSeconds, overall.retryAfterSeconds),
+          ),
+        },
       },
     );
   }

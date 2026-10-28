@@ -1,4 +1,3 @@
-import { COURSE_LABELS } from "@/lib/institution";
 import { formatIndianPhone } from "@/lib/email/fields";
 import { formatSubmissionTime } from "@/lib/reference";
 import type { Enquiry } from "@/lib/validation";
@@ -18,10 +17,6 @@ export const SHEET_COLUMNS = [
   "Programme of interest",
   "City / district",
   "Current college / institution",
-  "Academic qualification",
-  "Marks / qualifying exam",
-  "NEET-UG status",
-  "NEET-UG score",
   "Areas of interest",
   "Academic / career goals",
   "Parent / guardian",
@@ -105,13 +100,9 @@ export function sheetRow({
     enquiry.fullName,
     enquiry.email,
     sheetPhone(enquiry.phone),
-    COURSE_LABELS[enquiry.course],
+    enquiry.programme,
     enquiry.city,
     enquiry.currentCollege,
-    enquiry.qualification,
-    enquiry.marks,
-    enquiry.neetStatus,
-    enquiry.neetScore ?? "—",
     enquiry.interests.join(", "),
     enquiry.goals,
     enquiry.parentName,

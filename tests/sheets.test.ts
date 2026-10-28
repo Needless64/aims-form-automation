@@ -100,10 +100,10 @@ describe("spreadsheet row", () => {
     // No leading "+": Sheets would read it as a formula and show #ERROR!.
     expect(row[SHEET_COLUMNS.indexOf("Mobile number")]).toBe("91 98765 43210");
     expect(row[SHEET_COLUMNS.indexOf("Programme of interest")]).toBe(
-      "MBBS — Bachelor of Medicine and Bachelor of Surgery",
+      "General Medicine",
     );
     expect(row[SHEET_COLUMNS.indexOf("Areas of interest")]).toBe(
-      "Clinical practice, Medical research",
+      "General Medicine, Radiology",
     );
     expect(row[SHEET_COLUMNS.indexOf("Consent to be contacted")]).toBe("Yes");
   });
@@ -114,13 +114,17 @@ describe("spreadsheet row", () => {
     }
   });
 
-  it("marks a NEET score the candidate never provided", () => {
-    const row = sheetRow({
-      ...input,
-      enquiry: { ...validEnquiry, neetStatus: "Not appeared", neetScore: undefined },
-    });
-    expect(row[SHEET_COLUMNS.indexOf("NEET-UG status")]).toBe("Not appeared");
-    expect(row[SHEET_COLUMNS.indexOf("NEET-UG score")]).toBe("—");
+  it("carries no undergraduate columns", () => {
+    for (const label of [
+      "Qualification",
+      "Marks",
+      "NEET",
+    ]) {
+      expect(
+        SHEET_COLUMNS.some((column) => column.includes(label)),
+        label,
+      ).toBe(false);
+    }
   });
 });
 

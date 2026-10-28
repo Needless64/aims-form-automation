@@ -18,12 +18,12 @@ export const metadata: Metadata = {
     template: "%s | AIMS",
   },
   description:
-    "Admissions enquiries for Arundathi Institute of Medical Sciences (AIMS), Dundigal, Telangana. MBBS admissions for 2026–27, affiliated to KNRUHS and NMC approved. Counselling code AIMD.",
+    "Admissions enquiries for Arundathi Institute of Medical Sciences (AIMS), Dundigal, Telangana. Postgraduate medical admissions for 2026–27, affiliated to KNRUHS and NMC approved. Counselling code AIMD.",
   keywords: [
     "AIMS admissions",
     "Arundathi Institute of Medical Sciences",
-    "MBBS admissions 2026",
-    "medical college Hyderabad",
+    "PG medical admissions 2026",
+    "postgraduate medical admissions Hyderabad",
     "KNRUHS",
     "AIMD counselling code",
   ],

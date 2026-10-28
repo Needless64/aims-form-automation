@@ -14,7 +14,7 @@ import {
 } from "@/lib/email/components";
 import { formatIndianPhone, studentDetailFields } from "@/lib/email/fields";
 import { sanitizeHeaderValue } from "@/lib/escape";
-import { COURSE_LABELS, INSTITUTION } from "@/lib/institution";
+import { INSTITUTION } from "@/lib/institution";
 import { formatSubmissionTime } from "@/lib/reference";
 import type { Enquiry } from "@/lib/validation";
 
@@ -56,10 +56,6 @@ export function buildAdmissionsNotification({
     "Programme of interest",
     "City / district",
     "Current college / institution",
-    "Academic qualification",
-    "Marks / qualifying exam",
-    "NEET-UG status",
-    "NEET-UG score",
     "Areas of interest",
     "Academic / career goals",
     "Parent / guardian",
@@ -83,7 +79,7 @@ export function buildAdmissionsNotification({
   const summary = receiptBand([
     { label: "Reference ID", value: referenceId, mono: true },
     { label: "Submitted", value: timeLabel },
-    { label: "Programme of interest", value: COURSE_LABELS[enquiry.course] },
+    { label: "Programme of interest", value: enquiry.programme },
   ]);
 
   const contactSection = `<tr>
@@ -101,7 +97,7 @@ export function buildAdmissionsNotification({
         </td>
         <td class="contact-cell" width="33%" valign="top" style="padding:18px 20px;border-left:1px solid ${EMAIL_COLORS.line};">
           <div style="font-family:${SANS};font-size:10px;line-height:15px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:${EMAIL_COLORS.muted};">Programme</div>
-          <div style="margin-top:5px;font-family:${SANS};font-size:13.5px;line-height:20px;color:${EMAIL_COLORS.navy};">${H(COURSE_LABELS[enquiry.course])}</div>
+          <div style="margin-top:5px;font-family:${SANS};font-size:13.5px;line-height:20px;color:${EMAIL_COLORS.navy};">${H(enquiry.programme)}</div>
         </td>
       </tr>
     </table>
@@ -181,7 +177,7 @@ STUDENT CONTACT DETAILS
 Name: ${enquiry.fullName}
 Email: ${enquiry.email}
 Phone: ${formatIndianPhone(enquiry.phone)}
-Programme: ${COURSE_LABELS[enquiry.course]}
+Programme: ${enquiry.programme}
 
 ENQUIRY DETAILS
 ${textDetailFields}

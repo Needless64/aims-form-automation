@@ -1,10 +1,5 @@
 import { z } from "zod";
-import {
-  COURSES,
-  INTERESTS,
-  NEET_STATUSES,
-  QUALIFICATIONS,
-} from "@/lib/institution";
+import { INTERESTS, PROGRAMMES } from "@/lib/institution";
 
 export const HONEYPOT_FIELD = "companyWebsite";
 
@@ -91,45 +86,12 @@ const phoneField = z
       }),
   );
 
-/** A percentage written as `92`, `92.4` or `92.4%`, stored as `92.4%`. */
-const marksField = z
-  .string({ error: "Please enter your qualifying percentage." })
-  .trim()
-  .transform((value) => value.replace(/%$/, "").trim())
-  .refine((value) => /^\d{1,3}(\.\d{1,2})?$/.test(value), {
-    error: "Enter a percentage between 0 and 100, for example 92.4.",
-  })
-  .refine((value) => Number(value) > 0 && Number(value) <= 100, {
-    error: "Percentage must be greater than 0 and at most 100.",
-  })
-  .transform((value) => `${Number(value)}%`);
-
-/**
- * NEET-UG score is required from candidates who appeared for the exam and is
- * left empty by everyone else; it is the only conditionally applicable field.
- */
-const neetScoreField = z.preprocess(
-  (value) =>
-    typeof value === "string" && value.trim() === "" ? undefined : value,
-  z
-    .string({ error: "Enter your NEET-UG score between 0 and 720." })
-    .trim()
-    .refine((value) => /^\d{1,3}$/.test(value), {
-      error: "Enter your NEET-UG score as a whole number between 0 and 720.",
-    })
-    .refine((value) => Number(value) <= 720, {
-      error: "NEET-UG score cannot be more than 720.",
-    })
-    .transform((value) => String(Number(value)))
-    .optional(),
-);
-
 export const enquirySchema = z
   .object({
     fullName: nameField("the student's full name"),
     email: emailField,
     phone: phoneField,
-    course: z.enum(COURSES, {
+    programme: z.enum(PROGRAMMES, {
       error: "Please select the programme you are interested in.",
     }),
     city: requiredText({
@@ -144,14 +106,6 @@ export const enquirySchema = z
       pattern: PLACE_PATTERN,
       patternError: "Enter a valid college or institution name.",
     }),
-    qualification: z.enum(QUALIFICATIONS, {
-      error: "Please select your academic qualification.",
-    }),
-    marks: marksField,
-    neetStatus: z.enum(NEET_STATUSES, {
-      error: "Please select your NEET-UG status.",
-    }),
-    neetScore: neetScoreField,
     interests: z
       .array(z.enum(INTERESTS, { error: "Select a valid area of interest." }), {
         error: "Select at least one area of interest.",
@@ -168,17 +122,8 @@ export const enquirySchema = z
     }),
     parentName: nameField("your parent or guardian's name"),
     consent: z.literal(true, {
-      error: "Please consent to being contacted about your enquiry.",
+      error: "Please consent to be contacted about your enquiry.",
     }),
-  })
-  .superRefine((value, context) => {
-    if (value.neetStatus === "Appeared" && !value.neetScore) {
-      context.addIssue({
-        code: "custom",
-        path: ["neetScore"],
-        message: "Enter your NEET-UG score between 0 and 720.",
-      });
-    }
   });
 
 export type Enquiry = z.infer<typeof enquirySchema>;

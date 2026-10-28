@@ -293,17 +293,17 @@ export default function HomePage() {
             <div className="programme">
               <div>
                 <span className="eyebrow">Programmes · 2026–27</span>
-                <h2 id="programme-title">Begin with MBBS.</h2>
+                <h2 id="programme-title">Begin with a postgraduate medical degree.</h2>
                 <p>
-                  The MBBS programme is the primary undergraduate medical
-                  programme at AIMS. NEET-UG qualified candidates participate in
-                  KNRUHS counselling and select AIMS using counselling code AIMD.
-                  The official AIMS programmes pages also list Nursing &amp;
-                  Allied Health and Paramedical Diplomas.
+                  AIMS admits candidates pursuing a postgraduate medical degree.
+                  You join a department — General Medicine, General Surgery,
+                  Radiology, Anaesthesia, Pathology and others — and NEET-PG
+                  qualified candidates participate in KNRUHS counselling,
+                  selecting AIMS with counselling code AIMD.
                 </p>
                 <div className="programme__actions">
                   <Link className="button" href="/enquire">
-                    Enquire about MBBS
+                    Enquire about a department
                     <ArrowRight />
                   </Link>
                   <p className="programme__note">
@@ -316,11 +316,11 @@ export default function HomePage() {
               <dl className="programme__stats">
                 <div className="programme__stat">
                   <dt>Programme</dt>
-                  <dd>MBBS</dd>
+                  <dd>Postgraduate medical</dd>
                 </div>
                 <div className="programme__stat">
                   <dt>Admission route</dt>
-                  <dd>NEET-UG &amp; KNRUHS</dd>
+                  <dd>NEET-PG &amp; KNRUHS</dd>
                 </div>
                 <div className="programme__stat">
                   <dt>Counselling code</dt>

@@ -30,6 +30,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Nothing here pushes back to the repository, so leave no credential
+          # behind for a later step to pick up.
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:

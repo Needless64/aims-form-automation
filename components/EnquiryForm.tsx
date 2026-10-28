@@ -2,12 +2,9 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
-  COURSES,
-  COURSE_LABELS,
   INSTITUTION,
   INTERESTS,
-  NEET_STATUSES,
-  QUALIFICATIONS,
+  PROGRAMMES,
   type Interest,
 } from "@/lib/institution";
 
@@ -15,13 +12,9 @@ interface FormValues {
   fullName: string;
   email: string;
   phone: string;
-  course: string;
+  programme: string;
   city: string;
   currentCollege: string;
-  qualification: string;
-  marks: string;
-  neetStatus: string;
-  neetScore: string;
   interests: Interest[];
   goals: string;
   parentName: string;
@@ -47,13 +40,9 @@ const INITIAL_VALUES: FormValues = {
   fullName: "",
   email: "",
   phone: "",
-  course: "",
+  programme: "",
   city: "",
   currentCollege: "",
-  qualification: "",
-  marks: "",
-  neetStatus: "",
-  neetScore: "",
   interests: [],
   goals: "",
   parentName: "",
@@ -70,23 +59,6 @@ function normalizePhone(value: string): string {
   if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2);
   if (digits.length === 11 && digits.startsWith("0")) return digits.slice(1);
   return digits;
-}
-
-/**
- * Reject an edit that cannot become valid, keeping the longest acceptable
- * prefix instead. Typing a fourth digit into a three-digit field does nothing
- * rather than letting the value grow past what the server will accept.
- */
-function longestAcceptable(
-  value: string,
-  isValid: (candidate: string) => boolean,
-): string {
-  if (isValid(value)) return value;
-  for (let end = value.length - 1; end > 0; end -= 1) {
-    const prefix = value.slice(0, end);
-    if (isValid(prefix)) return prefix;
-  }
-  return "";
 }
 
 /**
@@ -112,15 +84,8 @@ function sanitizePhoneInput(value: string): string {
   return `${withCountryCode ? "+" : ""}${output.replace(/^\s+/, "")}`;
 }
 
-/** No more than three whole digits, an optional decimal point and two decimals. */
-const MARKS_INPUT = /^\d{0,3}(\.\d{0,2})?%?$/;
-const NEET_SCORE_INPUT = /^\d{0,3}$/;
-
 const INPUT_MASKS: Partial<Record<keyof FormValues, (value: string) => string>> = {
   phone: sanitizePhoneInput,
-  marks: (value) => longestAcceptable(value, (text) => MARKS_INPUT.test(text)),
-  neetScore: (value) =>
-    longestAcceptable(value, (text) => NEET_SCORE_INPUT.test(text)),
 };
 
 function isRequiredName(value: string): boolean {
@@ -136,7 +101,6 @@ function isRequiredPlace(value: string, max: number): boolean {
 /** Mirrors the server schema so the same submission is rejected in both places. */
 function validate(values: FormValues): Errors {
   const errors: Errors = {};
-  const marks = values.marks.trim().replace(/%$/, "").trim();
 
   if (!isRequiredName(values.fullName)) {
     errors.fullName = "Please enter the student's full name.";
@@ -147,32 +111,14 @@ function validate(values: FormValues): Errors {
   if (!/^[6-9]\d{9}$/.test(normalizePhone(values.phone))) {
     errors.phone = "Enter a valid 10-digit Indian mobile number.";
   }
-  if (!values.course) {
-    errors.course = "Please select the programme you are interested in.";
+  if (!values.programme) {
+    errors.programme = "Please select the programme you are interested in.";
   }
   if (!isRequiredPlace(values.city, 80)) {
     errors.city = "Please enter your current city or district.";
   }
   if (!isRequiredPlace(values.currentCollege, 120)) {
     errors.currentCollege = "Please enter your current college or institution.";
-  }
-  if (!values.qualification) {
-    errors.qualification = "Please select your academic qualification.";
-  }
-  if (!/^\d{1,3}(\.\d{1,2})?$/.test(marks)) {
-    errors.marks = "Enter a percentage between 0 and 100, for example 92.4.";
-  } else if (Number(marks) <= 0 || Number(marks) > 100) {
-    errors.marks = "Percentage must be greater than 0 and at most 100.";
-  }
-  if (!values.neetStatus) {
-    errors.neetStatus = "Please select your NEET-UG status.";
-  }
-  if (values.neetStatus === "Appeared") {
-    if (!/^\d{1,3}$/.test(values.neetScore.trim())) {
-      errors.neetScore = "Enter your NEET-UG score between 0 and 720.";
-    } else if (Number(values.neetScore) > 720) {
-      errors.neetScore = "NEET-UG score cannot be more than 720.";
-    }
   }
   if (values.interests.length === 0) {
     errors.interests = "Select at least one area of interest.";
@@ -215,12 +161,7 @@ export function EnquiryForm() {
     const mask = INPUT_MASKS[key];
     const masked =
       mask && typeof value === "string" ? (mask(value) as FormValues[K]) : value;
-    setValues((current) => {
-      const next = { ...current, [key]: masked };
-      // The score only applies to candidates who appeared for NEET-UG.
-      if (key === "neetStatus" && value !== "Appeared") next.neetScore = "";
-      return next;
-    });
+    setValues((current) => ({ ...current, [key]: masked }));
     setErrors((current) => {
       if (!current[key as string]) return current;
       const next = { ...current };
@@ -270,13 +211,9 @@ export function EnquiryForm() {
       fullName: values.fullName,
       email: values.email,
       phone: values.phone,
-      course: values.course,
+      programme: values.programme,
       city: values.city,
       currentCollege: values.currentCollege,
-      qualification: values.qualification,
-      marks: values.marks,
-      neetStatus: values.neetStatus,
-      neetScore: values.neetStatus === "Appeared" ? values.neetScore : "",
       interests: values.interests,
       goals: values.goals,
       parentName: values.parentName,
@@ -403,8 +340,6 @@ export function EnquiryForm() {
       </div>
     );
   }
-
-  const scoreApplies = values.neetStatus === "Appeared";
 
   return (
     <div
@@ -544,28 +479,28 @@ export function EnquiryForm() {
           </div>
 
           <div className="field">
-            <label htmlFor="course">
+            <label htmlFor="programme">
               Programme of interest <span className="req">*</span>
             </label>
             <select
-              id="course"
-              name="course"
+              id="programme"
+              name="programme"
               required
-              value={values.course}
-              onChange={(event) => update("course", event.target.value)}
-              aria-invalid={Boolean(errors.course)}
-              aria-describedby={errors.course ? "course-error" : undefined}
+              value={values.programme}
+              onChange={(event) => update("programme", event.target.value)}
+              aria-invalid={Boolean(errors.programme)}
+              aria-describedby={errors.programme ? "programme-error" : undefined}
             >
-              <option value="">Select a programme</option>
-              {COURSES.map((course) => (
-                <option key={course} value={course}>
-                  {COURSE_LABELS[course]}
+              <option value="">Select a department</option>
+              {PROGRAMMES.map((programme) => (
+                <option key={programme} value={programme}>
+                  {programme}
                 </option>
               ))}
             </select>
-            {errors.course ? (
-              <span className="field__error" id="course-error">
-                {errors.course}
+            {errors.programme ? (
+              <span className="field__error" id="programme-error">
+                {errors.programme}
               </span>
             ) : null}
           </div>
@@ -612,137 +547,13 @@ export function EnquiryForm() {
               aria-describedby={
                 errors.currentCollege ? "currentCollege-error" : undefined
               }
-              placeholder="School, junior college or degree college"
+              placeholder="Your medical college or institution"
             />
             {errors.currentCollege ? (
               <span className="field__error" id="currentCollege-error">
                 {errors.currentCollege}
               </span>
             ) : null}
-          </div>
-
-          <div className="field">
-            <label htmlFor="qualification">
-              Academic qualification <span className="req">*</span>
-            </label>
-            <select
-              id="qualification"
-              name="qualification"
-              required
-              value={values.qualification}
-              onChange={(event) =>
-                update("qualification", event.target.value)
-              }
-              aria-invalid={Boolean(errors.qualification)}
-              aria-describedby={
-                errors.qualification ? "qualification-error" : undefined
-              }
-            >
-              <option value="">Select qualification</option>
-              {QUALIFICATIONS.map((qualification) => (
-                <option key={qualification} value={qualification}>
-                  {qualification}
-                </option>
-              ))}
-            </select>
-            {errors.qualification ? (
-              <span className="field__error" id="qualification-error">
-                {errors.qualification}
-              </span>
-            ) : null}
-          </div>
-
-          <div className="field">
-            <label htmlFor="marks">
-              Qualifying percentage <span className="req">*</span>
-            </label>
-            <input
-              id="marks"
-              name="marks"
-              type="text"
-              inputMode="decimal"
-              maxLength={6}
-              required
-              value={values.marks}
-              onChange={(event) => update("marks", event.target.value)}
-              aria-invalid={Boolean(errors.marks)}
-              aria-describedby={errors.marks ? "marks-error" : "marks-hint"}
-              placeholder="e.g. 92.4"
-            />
-            {errors.marks ? (
-              <span className="field__error" id="marks-error">
-                {errors.marks}
-              </span>
-            ) : (
-              <span className="field__hint" id="marks-hint">
-                Number between 0 and 100. Add % if you prefer.
-              </span>
-            )}
-          </div>
-
-          <div className="field">
-            <label htmlFor="neetStatus">
-              NEET-UG status <span className="req">*</span>
-            </label>
-            <select
-              id="neetStatus"
-              name="neetStatus"
-              required
-              value={values.neetStatus}
-              onChange={(event) => update("neetStatus", event.target.value)}
-              aria-invalid={Boolean(errors.neetStatus)}
-              aria-describedby={
-                errors.neetStatus ? "neetStatus-error" : undefined
-              }
-            >
-              <option value="">Select status</option>
-              {NEET_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-            {errors.neetStatus ? (
-              <span className="field__error" id="neetStatus-error">
-                {errors.neetStatus}
-              </span>
-            ) : null}
-          </div>
-
-          <div className="field">
-            <label htmlFor="neetScore">
-              NEET-UG score{" "}
-              {scoreApplies ? (
-                <span className="req">*</span>
-              ) : (
-                <span className="field__optional">if appeared</span>
-              )}
-            </label>
-            <input
-              id="neetScore"
-              name="neetScore"
-              type="text"
-              inputMode="numeric"
-              maxLength={3}
-              required={scoreApplies}
-              disabled={!scoreApplies}
-              value={values.neetScore}
-              onChange={(event) => update("neetScore", event.target.value)}
-              aria-invalid={Boolean(errors.neetScore)}
-              aria-describedby={
-                errors.neetScore ? "neetScore-error" : "neetScore-hint"
-              }
-              placeholder={scoreApplies ? "e.g. 640" : "Not applicable"}
-            />
-            {errors.neetScore ? (
-              <span className="field__error" id="neetScore-error">
-                {errors.neetScore}
-              </span>
-            ) : (
-              <span className="field__hint" id="neetScore-hint">
-                Whole number out of 720. Enabled only if you appeared.
-              </span>
-            )}
           </div>
 
           <div className="field field--full">

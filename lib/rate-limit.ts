@@ -81,6 +81,18 @@ export const enquiryRateLimiter =
   globalForRateLimit.__aimsRateLimiter ??
   createRateLimiter({ limit: 5, windowMs: 10 * 60 * 1000 });
 
+/**
+ * A second, address-independent ceiling. Per-IP buckets are only as good as the
+ * address they key on, and behind a proxy that address can be varied; this one
+ * bounds how much mail the mailbox can be made to send no matter how the
+ * requests are spread. It sits well above real traffic for the form, so a busy
+ * counselling day never hits it, while a flood is stopped at the door.
+ */
+export const enquiryGlobalRateLimiter = createRateLimiter({
+  limit: 30,
+  windowMs: 10 * 60 * 1000,
+});
+
 if (process.env.NODE_ENV !== "production") {
   globalForRateLimit.__aimsRateLimiter = enquiryRateLimiter;
 }

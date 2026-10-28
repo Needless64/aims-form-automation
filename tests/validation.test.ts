@@ -6,12 +6,9 @@ const REQUIRED_FIELDS = [
   "fullName",
   "email",
   "phone",
-  "course",
+  "programme",
   "city",
   "currentCollege",
-  "qualification",
-  "marks",
-  "neetStatus",
   "interests",
   "goals",
   "parentName",
@@ -19,7 +16,7 @@ const REQUIRED_FIELDS = [
 ];
 
 describe("enquiry validation", () => {
-  it("accepts a complete enquiry and normalizes phone, email and marks", () => {
+  it("accepts a complete enquiry and normalizes phone, email and text", () => {
     const result = enquirySchema.safeParse(validRequestBody);
     expect(result.success).toBe(true);
     if (!result.success) return;
@@ -27,7 +24,7 @@ describe("enquiry validation", () => {
     expect(result.data.phone).toBe("9876543210");
     expect(result.data.city).toBe("Hyderabad");
     expect(result.data.fullName).toBe("Ananya Rao");
-    expect(result.data.marks).toBe("95.2%");
+    expect(result.data.programme).toBe("General Medicine");
   });
 
   it("requires every field in the submission", () => {
@@ -43,6 +40,23 @@ describe("enquiry validation", () => {
     }
   });
 
+  it("drops the undergraduate fields the form no longer collects", () => {
+    const result = enquirySchema.safeParse(
+      minimalRequestBody({
+        qualification: "12th / Intermediate — completed",
+        marks: "95.2%",
+        neetStatus: "Appeared",
+        neetScore: "640",
+      }),
+    );
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data).not.toHaveProperty("qualification");
+    expect(result.data).not.toHaveProperty("marks");
+    expect(result.data).not.toHaveProperty("neetStatus");
+    expect(result.data).not.toHaveProperty("neetScore");
+  });
+
   it("rejects empty or whitespace-only required text", () => {
     for (const field of ["fullName", "city", "currentCollege", "goals", "parentName"]) {
       const result = enquirySchema.safeParse(
@@ -53,14 +67,14 @@ describe("enquiry validation", () => {
   });
 
   it("rejects non-string values for text fields", () => {
-    for (const field of ["fullName", "city", "currentCollege", "marks", "parentName"]) {
+    for (const field of ["fullName", "city", "currentCollege", "parentName"]) {
       const result = enquirySchema.safeParse(
         minimalRequestBody({ [field]: 123 }),
       );
       expect(result.success, field).toBe(false);
     }
     expect(
-      enquirySchema.safeParse(minimalRequestBody({ interests: "Clinical practice" }))
+      enquirySchema.safeParse(minimalRequestBody({ interests: "General Medicine" }))
         .success,
     ).toBe(false);
   });
@@ -94,64 +108,34 @@ describe("enquiry validation", () => {
     }
   });
 
-  it("rejects unlisted programmes and qualifications", () => {
-    expect(
-      enquirySchema.safeParse(
-        minimalRequestBody({ course: "Computer Science Engineering" }),
-      ).success,
-    ).toBe(false);
-    expect(
-      enquirySchema.safeParse(minimalRequestBody({ qualification: "PhD" })).success,
-    ).toBe(false);
-  });
-
-  it("accepts marks as a number or percentage and stores a percentage", () => {
-    for (const [input, expected] of [
-      ["92.4", "92.4%"],
-      ["92.4%", "92.4%"],
-      ["100", "100%"],
-      ["71", "71%"],
-    ] as const) {
-      const result = enquirySchema.safeParse(minimalRequestBody({ marks: input }));
-      expect(result.success, input).toBe(true);
-      if (result.success) expect(result.data.marks).toBe(expected);
-    }
-  });
-
-  it("rejects impossible or malformed marks", () => {
-    for (const marks of ["0", "101", "-5", "92.444", "ninety", "640/720", 92]) {
-      const result = enquirySchema.safeParse(minimalRequestBody({ marks }));
-      expect(result.success, String(marks)).toBe(false);
-    }
-  });
-
-  it("requires a NEET score only from candidates who appeared", () => {
-    const appeared = enquirySchema.safeParse(
-      minimalRequestBody({ neetStatus: "Appeared", neetScore: "" }),
-    );
-    expect(appeared.success).toBe(false);
-    if (!appeared.success) {
-      expect(formatFieldErrors(appeared.error).neetScore).toMatch(/NEET-UG score/i);
+  it("accepts only the published departments as the programme", () => {
+    for (const programme of [
+      "General Medicine",
+      "Dermatology",
+      "Paediatrics",
+      "Respiratory Medicine",
+      "General Surgery",
+      "Orthopaedics",
+      "Obstetric & Gynaecology",
+      "Ophthalmology",
+      "Oto – Rhinolaryngology / ENT",
+      "Radiology",
+      "Anaesthesia",
+      "Biochemistry",
+      "Pathology",
+    ]) {
+      expect(
+        enquirySchema.safeParse(minimalRequestBody({ programme })).success,
+        programme,
+      ).toBe(true);
     }
 
-    const notAppeared = enquirySchema.safeParse(
-      minimalRequestBody({ neetStatus: "Not appeared", neetScore: "" }),
-    );
-    expect(notAppeared.success).toBe(true);
-    if (notAppeared.success) expect(notAppeared.data.neetScore).toBeUndefined();
-  });
-
-  it("rejects scores outside 0–720 and non-numeric scores", () => {
-    for (const neetScore of ["721", "abc", "-10", "640.5", 640]) {
-      const result = enquirySchema.safeParse(minimalRequestBody({ neetScore }));
-      expect(result.success, String(neetScore)).toBe(false);
+    for (const programme of ["Computer Science Engineering", "MBBS", "general medicine"]) {
+      expect(
+        enquirySchema.safeParse(minimalRequestBody({ programme })).success,
+        programme,
+      ).toBe(false);
     }
-  });
-
-  it("rejects a NEET status that is not listed", () => {
-    expect(
-      enquirySchema.safeParse(minimalRequestBody({ neetStatus: "Maybe" })).success,
-    ).toBe(false);
   });
 
   it("requires at least one area of interest from the listed values", () => {
@@ -163,8 +147,14 @@ describe("enquiry validation", () => {
         .success,
     ).toBe(false);
     expect(
+      enquirySchema.safeParse(minimalRequestBody({ interests: ["Clinical practice"] }))
+        .success,
+    ).toBe(false);
+    expect(
       enquirySchema.safeParse(
-        minimalRequestBody({ interests: ["Clinical practice", "Medical research"] }),
+        minimalRequestBody({
+          interests: ["Obstetrics & Gynecology", "General Surgery / Orthopedics"],
+        }),
       ).success,
     ).toBe(true);
   });
@@ -198,8 +188,8 @@ describe("enquiry validation", () => {
     expect(errors.fullName).toMatch(/full name/i);
     expect(errors.email).toMatch(/email/i);
     expect(errors.phone).toMatch(/mobile/i);
-    expect(errors.course).toMatch(/programme/i);
+    expect(errors.programme).toMatch(/programme/i);
     expect(errors.consent).toMatch(/consent/i);
-    expect(Object.keys(errors).length).toBeGreaterThanOrEqual(13);
+    expect(Object.keys(errors).length).toBeGreaterThanOrEqual(10);
   });
 });

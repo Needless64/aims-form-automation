@@ -33,36 +33,23 @@ describe("student confirmation email", () => {
     expect(studentEmail.html).toContain("Welcome, Ananya Rao!");
     expect(studentEmail.html).toContain("ananya.rao@example.com");
     expect(studentEmail.html).toContain("+91 98765 43210");
-    expect(studentEmail.html).toContain(
-      "MBBS — Bachelor of Medicine and Bachelor of Surgery",
-    );
+    expect(studentEmail.html).toContain("General Medicine");
     expect(studentEmail.html).toContain("Hyderabad");
-    expect(studentEmail.html).toContain("Narayana Junior College");
-    expect(studentEmail.html).toContain("95.2%");
-    expect(studentEmail.html).toContain("640");
-    expect(studentEmail.html).toContain("Clinical practice, Medical research");
+    expect(studentEmail.html).toContain("Osmania Medical College");
+    expect(studentEmail.html).toContain("General Medicine, Radiology");
     expect(studentEmail.html).toContain("serve rural communities");
     expect(studentEmail.html).toContain(referenceId);
   });
 
-  it("omits the NEET score when the candidate has not appeared", () => {
-    const minimal = buildStudentConfirmation({
-      enquiry: {
-        ...validEnquiry,
-        neetStatus: "Not appeared",
-        neetScore: undefined,
-      },
-      referenceId,
-      submittedAt,
-      logoUrl,
-    });
-
-    expect(minimal.html).not.toContain("NEET-UG score");
-    expect(minimal.html).toContain("Not appeared");
-    expect(minimal.html).not.toContain("undefined");
-    expect(minimal.html).not.toContain("null");
-    expect(minimal.text).not.toContain("undefined");
-    expect(minimal.text).not.toContain("null");
+  it("never mentions the undergraduate fields it no longer asks for", () => {
+    for (const built of [studentEmail, admissionsEmail]) {
+      expect(built.html).not.toMatch(/NEET|qualification/i);
+      expect(built.text).not.toMatch(/NEET|qualification/i);
+      expect(built.html).not.toContain("undefined");
+      expect(built.html).not.toContain("null");
+      expect(built.text).not.toContain("undefined");
+      expect(built.text).not.toContain("null");
+    }
   });
 
   it("escapes user content instead of rendering markup", () => {
@@ -129,12 +116,9 @@ describe("internal admissions notification", () => {
     expect(admissionsEmail.html).toContain("Ananya Rao");
     expect(admissionsEmail.html).toContain("ananya.rao@example.com");
     expect(admissionsEmail.html).toContain("+91 98765 43210");
-    expect(admissionsEmail.html).toContain(
-      "MBBS — Bachelor of Medicine and Bachelor of Surgery",
-    );
+    expect(admissionsEmail.html).toContain("General Medicine");
     expect(admissionsEmail.html).toContain("Hyderabad");
-    expect(admissionsEmail.html).toContain("95.2%");
-    expect(admissionsEmail.html).toContain("Clinical practice");
+    expect(admissionsEmail.html).toContain("Radiology");
     expect(admissionsEmail.html).toContain("serve rural communities");
     expect(admissionsEmail.html).toContain("Suresh Rao");
     expect(admissionsEmail.html).toContain(

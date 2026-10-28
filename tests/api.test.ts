@@ -181,6 +181,38 @@ describe("POST /api/enquiries", () => {
     expect(blocked.headers.get("Retry-After")).toBeTruthy();
   });
 
+  it("refuses a browser submission that names another site", async () => {
+    const response = await enquiryPOST(
+      enquiryRequest(minimalRequestBody(), "198.51.100.21", {
+        Origin: "https://evil.example",
+      }),
+    );
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      ok: false,
+      error: "forbidden_origin",
+    });
+    expect(sendMailMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts a browser submission from the site itself", async () => {
+    const response = await enquiryPOST(
+      enquiryRequest(minimalRequestBody(), "198.51.100.22", {
+        Origin: "http://localhost",
+      }),
+    );
+    expect(response.status).toBe(200);
+  });
+
+  it("keeps the response out of any cache", async () => {
+    const response = await enquiryPOST(
+      enquiryRequest(minimalRequestBody(), "198.51.100.23"),
+    );
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+  });
+
   it("returns 503 instead of a false success when email is unconfigured", async () => {
     vi.stubEnv("SMTP_APP_PASSWORD", "");
     const response = await enquiryPOST(
