@@ -25,7 +25,7 @@ Built with Next.js 16 (App Router), React 19, TypeScript, Zod, and Nodemailer ov
 - **Brochure tile**: on a desktop browser the PDF opens in the browser's own viewer in a new tab; on phones and tablets the same tile hands the file to the device download manager (`download` attribute, same-origin) with the file size and page count shown before the tap. The web copy is 4.1 MB rather than the 21.6 MB source export, with images capped at 96 dpi and re-encoded at JPEG quality 82 (visually equivalent at reading size).
 - **Video section**: click-to-play cards for four publicly embeddable YouTube videos, each opening an accessible modal (`role="dialog"`, focus trap, Escape and backdrop close, scroll lock) that loads the privacy-enhanced `youtube-nocookie.com` player and links back to YouTube. On phones the cards become a snap-scrolling row.
 - Instagram profile linked from the network tile; the LinkedIn company page remains linked from the footer.
-- 83 automated tests with the SMTP transport mocked.
+- 156 automated tests with the SMTP transport mocked and the GitHub dispatch stubbed.
 
 ## Project structure
 

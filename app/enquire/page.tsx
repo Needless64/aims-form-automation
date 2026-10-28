@@ -8,7 +8,7 @@ import { INSTITUTION } from "@/lib/institution";
 export const metadata: Metadata = {
   title: "Admissions Enquiry",
   description:
-    "Submit an admissions enquiry for Arundathi Institute of Medical Sciences, Dundigal. Admissions 2026–27, counselling code AIMD.",
+    "Submit a postgraduate medical admissions enquiry for Arundathi Institute of Medical Sciences, Dundigal. Admissions 2026–27, counselling code AIMD.",
 };
 
 function ArrowLeft() {
