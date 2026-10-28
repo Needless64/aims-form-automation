@@ -131,6 +131,12 @@ Rows go in through an Apps Script web app, so the sheet is never shared with a t
 3. **Deploy → New deployment → Web app**, *Execute as* **Me**, *Who has access* **Anyone**. Copy the `/exec` URL.
 4. In `.env.local`, set `SHEETS_WEBHOOK_URL` to that URL and `SHEETS_WEBHOOK_SECRET` to the same secret, then restart the dev server.
 
+**After a change to the columns**, open **Extensions → Apps Script**, choose
+`resetSheet` in the function list and press **Run**. It copies the current
+contents to a dated `Archive …` tab, clears the sheet and writes the current 14
+headings. From then on every enquiry rewrites row 1 if it ever differs from the
+site's column list, so the headings cannot drift again.
+
 A row that never appears is nearly always a secret mismatch: `SHARED_SECRET` in the script and `SHEETS_WEBHOOK_SECRET` in `.env.local` must be identical character for character. The submission still succeeds for the student, but the response reports `recorded: "failed"` and the server log says `"spreadsheetError":"sheet_rejected"`. Changing the script needs a re-deploy (*Deploy → Manage deployments → Edit → Version: New version*) before the new value takes effect.
 
 To check the two values agree without exposing either, open the `/exec` URL in a browser. The script answers with `{"ok":true,"secretSet":true,"secretFingerprint":"5f3c9a11","sheet":"Sheet1"}`, the first eight hex characters of the secret's SHA-256. Compare it with `printf %s "$SHEETS_WEBHOOK_SECRET" | sha256sum | cut -c1-8`; if they differ, the values cannot match and the secret line needs re-pasting. The secret itself is never returned.
@@ -156,6 +162,56 @@ const MAX_BODY_LENGTH = 64 * 1024;
  * EMAIL_WEBHOOK_URL transport.
  */
 const ALLOW_MAIL_RELAY = false;
+
+/**
+ * The column headings, in the order the site writes them. Keep in step with
+ * SHEET_COLUMNS in lib/sheets.ts; a test in this repository compares the two.
+ */
+const HEADER = [
+  'Reference ID',
+  'Received (IST)',
+  'Received (ISO 8601)',
+  'Student name',
+  'Email address',
+  'Mobile number',
+  'Programme of interest',
+  'City / district',
+  'Current college / institution',
+  'Areas of interest',
+  'Academic / career goals',
+  'Parent / guardian',
+  'Consent to be contacted',
+  'Source',
+];
+
+/**
+ * One-time maintenance, run from the editor after a change to the columns:
+ * archives whatever is there into a dated tab, clears the sheet, and writes the
+ * current headings. Nothing is destroyed — a reset after a heading change would
+ * otherwise leave older rows under the wrong columns, so they are preserved
+ * intact in the archive instead.
+ */
+function resetSheet() {
+  const book = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet =
+    (SHEET_NAME && book.getSheetByName(SHEET_NAME)) || book.getSheets()[0];
+
+  if (sheet.getLastRow() > 0) {
+    const stamp = Utilities.formatDate(
+      new Date(),
+      'Asia/Kolkata',
+      'yyyy-MM-dd HH:mm:ss',
+    );
+    sheet.copyTo(book).setName('Archive ' + stamp);
+  }
+
+  sheet.clear();
+  const headings = sheet.getRange(1, 1, 1, HEADER.length);
+  headings.setValues([HEADER]);
+  headings.setFontWeight('bold');
+  sheet.setFrozenRows(1);
+  return reply({ ok: true, columns: HEADER.length });
+}
 
 /**
  * `===` stops at the first wrong character, so response timing hints at how
