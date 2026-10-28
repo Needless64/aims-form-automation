@@ -24,6 +24,7 @@ export const INSTITUTION = {
    * place — pin, photos, directions — instead of a hand-built address query.
    */
   maps: "https://share.google/himIwovlDdETYmOuc",
+  instagram: "https://www.instagram.com/aimsmedicalcollege/",
   linkedin:
     "https://www.linkedin.com/company/arundathi-institute-of-medical-sciences/home/",
 } as const;

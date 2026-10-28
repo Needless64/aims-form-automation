@@ -9,7 +9,7 @@ Built with Next.js 16 (App Router), React 19, TypeScript, Zod, and Nodemailer ov
 ## What is implemented
 
 - AIMS-branded responsive landing page using the official AIMS logo and campus imagery, with a minimal card-based layout and all enquiry CTAs pointing to the dedicated form page.
-- Four quick-link tiles under the hero — brochure, LinkedIn, admissions phone, campus map — plus a video section of four YouTube films about AIMS and the Arundathi Hospital.
+- Four quick-link tiles under the hero — brochure, Instagram, admissions phone, campus map — plus a video section of four YouTube films about AIMS and the Arundathi Hospital.
 - Dedicated `/enquire` page set over the Arundathi Hospital photograph, with the form on a blue glass-morphism surface, a submit loading overlay, and an animated confirmation (drawn checkmark, pulsing ring, staggered reveal).
 - Institutional facts limited to verified information: established 2023, KNRUHS affiliation, NMC approval, counselling code AIMD, Dundigal campus.
 - Dedicated `/enquire` page with the admissions form: mandatory and optional medical-college-appropriate fields, client-side validation, server-side validation, and preserved values on failure.
@@ -24,7 +24,7 @@ Built with Next.js 16 (App Router), React 19, TypeScript, Zod, and Nodemailer ov
 - Every enquiry field is required and strictly typed: text fields reject markup characters, phone numbers must be 10-digit Indian mobiles, marks must be a 0–100 percentage, NEET score must be a whole number out of 720 (required only when the candidate appeared), and interests must come from the published list.
 - **Brochure tile**: on a desktop browser the PDF opens in the browser's own viewer in a new tab; on phones and tablets the same tile hands the file to the device download manager (`download` attribute, same-origin) with the file size and page count shown before the tap. The web copy is 4.1 MB rather than the 21.6 MB source export, with images capped at 96 dpi and re-encoded at JPEG quality 82 (visually equivalent at reading size).
 - **Video section**: click-to-play cards for four publicly embeddable YouTube videos, each opening an accessible modal (`role="dialog"`, focus trap, Escape and backdrop close, scroll lock) that loads the privacy-enhanced `youtube-nocookie.com` player and links back to YouTube. On phones the cards become a snap-scrolling row.
-- LinkedIn company page linked from the tile and the footer.
+- Instagram profile linked from the network tile; the LinkedIn company page remains linked from the footer.
 - 83 automated tests with the SMTP transport mocked.
 
 ## Project structure
@@ -448,6 +448,7 @@ Only after the sending mailbox is configured:
 - Institutional identity, logo, campus and hospital imagery: https://www.aims.ac.in/
 - Counselling code AIMD, admissions phone `9000994842`, and `admissions@aims.ac.in`: supplied admissions details for 2026–27.
 - Programme list: the official AIMS "Programs Offered" navigation lists Undergraduate (MBBS), Nursing & Allied Health, and Paramedical Diplomas. MBBS is presented as the primary programme; no other courses, fees, seat counts, rankings, placements, scholarships, or facilities claims were invented.
+- Instagram profile: https://www.instagram.com/aimsmedicalcollege/
 - LinkedIn company page: https://www.linkedin.com/company/arundathi-institute-of-medical-sciences/
 - Brochure PDF: supplied institute brochure (source export `aims-brochure.pdf`), published under `/documents/aims-brochure.pdf`.
 - Videos in the "Arundathi, on video" section are third-party coverage, credited on each card and never restated as AIMS claims:

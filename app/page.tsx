@@ -34,13 +34,20 @@ function ArrowUpRight() {
   );
 }
 
-function LinkedInIcon() {
+function InstagramIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M5.6 9.4h2.9v9.1H5.6V9.4Zm1.45-4.5a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4ZM10.4 9.4h2.8v1.25h.04a3.1 3.1 0 0 1 2.78-1.53c2.36 0 2.98 1.55 2.98 3.9v5.48h-2.9v-4.86c0-1.16-.02-2.65-1.62-2.65-1.62 0-1.87 1.26-1.87 2.57v4.94h-2.9V9.4Z"
-        fill="currentColor"
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect
+        x="3.6"
+        y="3.6"
+        width="16.8"
+        height="16.8"
+        rx="5"
+        stroke="currentColor"
+        strokeWidth="1.6"
       />
+      <circle cx="12" cy="12" r="4.1" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="17" cy="7" r="1.15" fill="currentColor" />
     </svg>
   );
 }
@@ -195,10 +202,10 @@ export default function HomePage() {
           <QuickLink
             tone="azure"
             eyebrow="Network"
-            title="LinkedIn"
+            title="Instagram"
             action="Follow AIMS"
-            href={INSTITUTION.linkedin}
-            icon={<LinkedInIcon />}
+            href={INSTITUTION.instagram}
+            icon={<InstagramIcon />}
             external
           />
           <QuickLink
