@@ -668,6 +668,12 @@ textarea {
   background: linear-gradient(152deg, #f6f7f8 0%, #e7ebef 100%);
 }
 
+/* Instagram's own palette in pastel: lavender through magenta to a warm
+   peach, light enough for the navy headline to stay legible. */
+.quick--instagram {
+  background: linear-gradient(152deg, #fbf0fa 0%, #f9e1ef 55%, #fbe8de 100%);
+}
+
 .quick--gold::before {
   background: linear-gradient(152deg, #fbe8bf 0%, #f1d597 100%);
 }
@@ -682,6 +688,10 @@ textarea {
 
 .quick--stone::before {
   background: linear-gradient(152deg, #eef1f5 0%, #dbe2e9 100%);
+}
+
+.quick--instagram::before {
+  background: linear-gradient(152deg, #f8def3 0%, #f4cbe4 55%, #f9dcc6 100%);
 }
 
 .quick__icon {
@@ -724,6 +734,16 @@ textarea {
   box-shadow: 0 16px 26px -18px rgba(16, 49, 91, 0.85);
 }
 
+.quick--instagram:hover .quick__icon {
+  background-image: linear-gradient(
+    42deg,
+    #fa7e1e 0%,
+    #d62976 52%,
+    #962fbf 100%
+  );
+  box-shadow: 0 16px 26px -18px rgba(214, 41, 118, 0.85);
+}
+
 .quick__icon svg {
   width: 20px;
   height: 20px;
@@ -739,6 +759,10 @@ textarea {
 
 .quick--teal .quick__icon {
   color: var(--teal-ink);
+}
+
+.quick--instagram .quick__icon {
+  color: #a52169;
 }
 
 .quick__eyebrow {
@@ -784,6 +808,10 @@ textarea {
 
 .quick--teal .quick__action {
   color: var(--teal-ink);
+}
+
+.quick--instagram .quick__action {
+  color: #a52169;
 }
 
 .quick__action svg {

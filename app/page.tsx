@@ -80,7 +80,7 @@ function PinIcon() {
 }
 
 interface QuickLinkProps {
-  tone: "azure" | "gold" | "teal" | "stone";
+  tone: "azure" | "gold" | "teal" | "stone" | "instagram";
   eyebrow: string;
   title: string;
   action: string;
@@ -200,7 +200,7 @@ export default function HomePage() {
         <section className="container quick-links" aria-label="Quick links">
           <BrochureTile />
           <QuickLink
-            tone="azure"
+            tone="instagram"
             eyebrow="Network"
             title="Instagram"
             action="Follow AIMS"
