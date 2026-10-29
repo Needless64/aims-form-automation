@@ -1,5 +1,4 @@
 import { formatIndianPhone } from "@/lib/email/fields";
-import { describeInterests } from "@/lib/institution";
 import { formatSubmissionTime } from "@/lib/reference";
 import type { Enquiry } from "@/lib/validation";
 
@@ -15,12 +14,12 @@ export const SHEET_COLUMNS = [
   "Student name",
   "Email address",
   "Mobile number",
-  "Programme of interest",
+  "Departments of interest",
   "Current city / district",
   "Current college / institution",
-  "Areas of interest",
   "Academic or career goals",
   "Parent / guardian name",
+  "Parent / guardian phone",
   "Consent to be contacted",
   "Source",
 ] as const;
@@ -101,12 +100,12 @@ export function sheetRow({
     enquiry.fullName,
     enquiry.email,
     sheetPhone(enquiry.phone),
-    enquiry.programme,
+    enquiry.departments.join(", "),
     enquiry.city,
     enquiry.currentCollege,
-    describeInterests(enquiry.interests, enquiry.interestOther),
-    enquiry.goals,
+    enquiry.goals ?? "",
     enquiry.parentName,
+    enquiry.parentPhone ? sheetPhone(enquiry.parentPhone) : "",
     enquiry.consent ? "Yes" : "No",
     "AIMS admissions website",
   ];

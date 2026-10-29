@@ -21,7 +21,7 @@ Built with Next.js 16 (App Router), React 19, TypeScript, Zod, and Nodemailer ov
 - HTML escaping, header-value sanitization, and server-controlled recipients.
 - Partial-failure handling: a success response is returned only when **both** email requests are accepted by the provider.
 - Admin-protected retry endpoint that retries only the failed leg and never re-sends an accepted email.
-- Every enquiry field is required and strictly typed: text fields reject markup characters, phone numbers must be 10-digit Indian mobiles, the programme must be one of the published departments, and interests must come from the published list — choosing "Others" also requires the candidate's own description, which is kept with their enquiry. The form is postgraduate-only: no undergraduate qualification, marks or NEET-UG fields are collected or recorded.
+- Every field is strictly typed: text fields reject markup characters, phone numbers must be 10-digit Indian mobiles, and every selected department must be one of the published ones. A candidate may choose several departments; goals and the parent/guardian phone number are optional. The form is postgraduate-only: no undergraduate qualification, marks or NEET-UG fields are collected or recorded.
 - **Brochure tile**: on a desktop browser the PDF opens in the browser's own viewer in a new tab; on phones and tablets the same tile hands the file to the device download manager (`download` attribute, same-origin) with the file size and page count shown before the tap. The web copy is 4.1 MB rather than the 21.6 MB source export, with images capped at 96 dpi and re-encoded at JPEG quality 82 (visually equivalent at reading size).
 - **Video section**: click-to-play cards for four publicly embeddable YouTube videos, each opening an accessible modal (`role="dialog"`, focus trap, Escape and backdrop close, scroll lock) that loads the privacy-enhanced `youtube-nocookie.com` player and links back to YouTube. On phones the cards become a snap-scrolling row.
 - Instagram profile linked from the network tile; the LinkedIn company page remains linked from the footer.
@@ -177,12 +177,12 @@ const HEADER = [
   'Student name',
   'Email address',
   'Mobile number',
-  'Programme of interest',
+  'Departments of interest',
   'Current city / district',
   'Current college / institution',
-  'Areas of interest',
   'Academic or career goals',
   'Parent / guardian name',
+  'Parent / guardian phone',
   'Consent to be contacted',
   'Source',
 ];
@@ -517,7 +517,8 @@ than `next.config.ts`.
 
 Accepts `application/json` only, maximum 16 KB.
 
-Required: `fullName` (2–100 letters, spaces, hyphens, apostrophes), `email`, `phone` (10-digit Indian mobile, `+91`/leading zero accepted and normalised), `programme` (one of the published departments), `city` (2–80), `currentCollege` (2–120), `interests` (at least one listed area), `interestOther` (2–80 characters, required only when `interests` includes `"Others"`), `goals` (10–600 characters), `parentName` (2–100), and `consent` (must be the boolean `true`).
+Required: `fullName` (2–100 letters, spaces, hyphens, apostrophes), `email`, `phone` (10-digit Indian mobile, `+91`/leading zero accepted and normalised), `departments` (one or more of the published departments), `city` (2–80), `currentCollege` (2–120), `parentName` (2–100), and `consent` (must be the boolean `true`).
+Optional: `goals` (up to 600 characters) and `parentPhone` (a 10-digit Indian mobile if given).
 Honeypot: `companyWebsite` must be empty.
 Origin: a browser POST whose `Origin` host differs from the request host is refused with `403` before it can spend a rate-limit slot.
 The undergraduate fields the form no longer asks for — `qualification`, `marks`, `neetStatus`, `neetScore`, and the old `course` key — are ignored if a stale client still sends them, so only the fields above are validated, emailed and recorded.

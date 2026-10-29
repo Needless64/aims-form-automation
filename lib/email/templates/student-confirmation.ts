@@ -59,7 +59,7 @@ export function buildStudentConfirmation({
   const summary = receiptBand([
     { label: "Reference ID", value: referenceId, mono: true },
     { label: "Submitted", value: timeLabel },
-    { label: "Programme of interest", value: enquiry.programme },
+    { label: "Departments of interest", value: enquiry.departments.join(", ") },
   ]);
 
   const intro = `<tr>
@@ -99,7 +99,7 @@ export function buildStudentConfirmation({
     ${stepList([
       {
         title: "Your enquiry is reviewed",
-        body: "Our admissions team reads the details you submitted, including the department you are interested in and your areas of interest.",
+        body: "Our admissions team reads the details you submitted, including the departments you are interested in.",
       },
       {
         title: "We get in touch",
@@ -213,7 +213,7 @@ YOUR SUBMISSION
 ${textFields}
 
 WHAT HAPPENS NEXT
-1. Your enquiry is reviewed - our admissions team reads the details you submitted, including the department you are interested in and your areas of interest.
+1. Your enquiry is reviewed - our admissions team reads the details you submitted, including the departments you are interested in.
 2. We get in touch - a counsellor contacts you on ${formatIndianPhone(enquiry.phone)} or ${enquiry.email}.
 3. You take it forward - we help with programme information, admission requirements and KNRUHS counselling, which uses the code ${INSTITUTION.counsellingCode}.
 

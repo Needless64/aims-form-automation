@@ -1,5 +1,4 @@
 import type { DetailField } from "@/lib/email/components";
-import { describeInterests } from "@/lib/institution";
 import type { Enquiry } from "@/lib/validation";
 
 export function formatIndianPhone(digits: string): string {
@@ -14,17 +13,17 @@ export function studentDetailFields(
     { label: "Full name", value: enquiry.fullName },
     { label: "Email address", value: enquiry.email },
     { label: "Mobile number", value: formatIndianPhone(enquiry.phone) },
-    { label: "Programme of interest", value: enquiry.programme },
+    { label: "Departments of interest", value: enquiry.departments.join(", ") },
     { label: "City / district", value: enquiry.city },
     { label: "Current college / institution", value: enquiry.currentCollege },
-    {
-      label: "Areas of interest",
-      value: enquiry.interests.length
-        ? describeInterests(enquiry.interests, enquiry.interestOther)
-        : undefined,
-    },
     { label: "Academic / career goals", value: enquiry.goals },
     { label: "Parent / guardian", value: enquiry.parentName },
+    {
+      label: "Parent / guardian phone",
+      value: enquiry.parentPhone
+        ? formatIndianPhone(enquiry.parentPhone)
+        : undefined,
+    },
     { label: "Enquiry reference", value: referenceId },
   ];
 }

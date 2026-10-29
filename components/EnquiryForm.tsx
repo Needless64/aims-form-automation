@@ -3,11 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
+  DEPARTMENTS,
   INSTITUTION,
-  INTERESTS,
-  OTHER_INTEREST,
-  PROGRAMMES,
-  type Interest,
+  type Department,
 } from "@/lib/institution";
 
 /** How long the confirmation stays on screen before the visitor is taken home. */
@@ -17,13 +15,12 @@ interface FormValues {
   fullName: string;
   email: string;
   phone: string;
-  programme: string;
+  departments: Department[];
   city: string;
   currentCollege: string;
-  interests: Interest[];
-  interestOther: string;
   goals: string;
   parentName: string;
+  parentPhone: string;
   consent: boolean;
   companyWebsite: string;
 }
@@ -46,13 +43,12 @@ const INITIAL_VALUES: FormValues = {
   fullName: "",
   email: "",
   phone: "",
-  programme: "",
+  departments: [],
   city: "",
   currentCollege: "",
-  interests: [],
-  interestOther: "",
   goals: "",
   parentName: "",
+  parentPhone: "",
   consent: false,
   companyWebsite: "",
 };
@@ -93,6 +89,7 @@ function sanitizePhoneInput(value: string): string {
 
 const INPUT_MASKS: Partial<Record<keyof FormValues, (value: string) => string>> = {
   phone: sanitizePhoneInput,
+  parentPhone: sanitizePhoneInput,
 };
 
 function isRequiredName(value: string): boolean {
@@ -118,8 +115,8 @@ function validate(values: FormValues): Errors {
   if (!/^[6-9]\d{9}$/.test(normalizePhone(values.phone))) {
     errors.phone = "Enter a valid 10-digit Indian mobile number.";
   }
-  if (!values.programme) {
-    errors.programme = "Please select the programme you are interested in.";
+  if (values.departments.length === 0) {
+    errors.departments = "Select at least one department.";
   }
   if (!isRequiredPlace(values.city, 80)) {
     errors.city = "Please enter your current city or district.";
@@ -127,17 +124,11 @@ function validate(values: FormValues): Errors {
   if (!isRequiredPlace(values.currentCollege, 120)) {
     errors.currentCollege = "Please enter your current college or institution.";
   }
-  if (values.interests.length === 0) {
-    errors.interests = "Select at least one area of interest.";
-  }
   if (
-    values.interests.includes(OTHER_INTEREST) &&
-    values.interestOther.trim().length < 2
+    values.parentPhone.trim() !== "" &&
+    !/^[6-9]\d{9}$/.test(normalizePhone(values.parentPhone))
   ) {
-    errors.interestOther = "Tell us your other area of interest.";
-  }
-  if (values.goals.trim().length < 10) {
-    errors.goals = "Please describe your academic or career goals.";
+    errors.parentPhone = "Enter a valid 10-digit Indian mobile number.";
   }
   if (!isRequiredName(values.parentName)) {
     errors.parentName = "Please enter your parent or guardian's name.";
@@ -205,17 +196,17 @@ export function EnquiryForm() {
     });
   }
 
-  function toggleInterest(interest: Interest) {
+  function toggleDepartment(department: Department) {
     setValues((current) => ({
       ...current,
-      interests: current.interests.includes(interest)
-        ? current.interests.filter((item) => item !== interest)
-        : [...current.interests, interest],
+      departments: current.departments.includes(department)
+        ? current.departments.filter((item) => item !== department)
+        : [...current.departments, department],
     }));
     setErrors((current) => {
-      if (!current.interests) return current;
+      if (!current.departments) return current;
       const next = { ...current };
-      delete next.interests;
+      delete next.departments;
       return next;
     });
   }
@@ -246,15 +237,12 @@ export function EnquiryForm() {
       fullName: values.fullName,
       email: values.email,
       phone: values.phone,
-      programme: values.programme,
+      departments: values.departments,
       city: values.city,
       currentCollege: values.currentCollege,
-      interests: values.interests,
-      interestOther: values.interests.includes(OTHER_INTEREST)
-        ? values.interestOther
-        : "",
       goals: values.goals,
       parentName: values.parentName,
+      parentPhone: values.parentPhone,
       consent: values.consent,
       companyWebsite: values.companyWebsite,
     };
@@ -407,8 +395,8 @@ export function EnquiryForm() {
       <div className="form-card__head">
         <h3>Admissions enquiry</h3>
         <p>
-          Every field is required. Your details are used only to respond to this
-          enquiry.
+          Fields marked * are required. Your details are used only to respond to
+          this enquiry.
         </p>
       </div>
 
@@ -527,31 +515,43 @@ export function EnquiryForm() {
             )}
           </div>
 
-          <div className="field">
-            <label htmlFor="programme">
-              Programme of interest <span className="req">*</span>
-            </label>
-            <select
-              id="programme"
-              name="programme"
-              required
-              value={values.programme}
-              onChange={(event) => update("programme", event.target.value)}
-              aria-invalid={Boolean(errors.programme)}
-              aria-describedby={errors.programme ? "programme-error" : undefined}
+          <div className="field field--full">
+            <span className="field-label" id="departments-label">
+              Departments of interest <span className="req">*</span>
+            </span>
+            <div
+              className="interests"
+              id="departments"
+              role="group"
+              tabIndex={-1}
+              aria-labelledby="departments-label"
+              aria-invalid={Boolean(errors.departments)}
+              aria-describedby={
+                errors.departments ? "departments-error" : "departments-hint"
+              }
             >
-              <option value="">Select a department</option>
-              {PROGRAMMES.map((programme) => (
-                <option key={programme} value={programme}>
-                  {programme}
-                </option>
+              {DEPARTMENTS.map((department) => (
+                <label className="chip" key={department}>
+                  <input
+                    type="checkbox"
+                    name="departments"
+                    value={department}
+                    checked={values.departments.includes(department)}
+                    onChange={() => toggleDepartment(department)}
+                  />
+                  <span>{department}</span>
+                </label>
               ))}
-            </select>
-            {errors.programme ? (
-              <span className="field__error" id="programme-error">
-                {errors.programme}
+            </div>
+            {errors.departments ? (
+              <span className="field__error" id="departments-error">
+                {errors.departments}
               </span>
-            ) : null}
+            ) : (
+              <span className="field__hint" id="departments-hint">
+                Select all that apply.
+              </span>
+            )}
           </div>
 
           <div className="field">
@@ -606,81 +606,17 @@ export function EnquiryForm() {
           </div>
 
           <div className="field field--full">
-            <span className="field-label" id="interests-label">
-              Areas of interest <span className="req">*</span>
-            </span>
-            <div
-              className="interests"
-              role="group"
-              aria-labelledby="interests-label"
-              aria-invalid={Boolean(errors.interests)}
-              aria-describedby={
-                errors.interests ? "interests-error" : undefined
-              }
-            >
-              {INTERESTS.map((interest) => (
-                <label className="chip" key={interest}>
-                  <input
-                    type="checkbox"
-                    name="interests"
-                    value={interest}
-                    checked={values.interests.includes(interest)}
-                    onChange={() => toggleInterest(interest)}
-                  />
-                  <span>{interest}</span>
-                </label>
-              ))}
-            </div>
-            {errors.interests ? (
-              <span className="field__error" id="interests-error">
-                {errors.interests}
-              </span>
-            ) : null}
-
-            {values.interests.includes(OTHER_INTEREST) ? (
-              <div className="field" style={{ marginTop: 10 }}>
-                <label htmlFor="interestOther">
-                  Please specify your other area of interest{" "}
-                  <span className="req">*</span>
-                </label>
-                <input
-                  id="interestOther"
-                  name="interestOther"
-                  type="text"
-                  maxLength={80}
-                  required
-                  value={values.interestOther}
-                  onChange={(event) =>
-                    update("interestOther", event.target.value)
-                  }
-                  aria-invalid={Boolean(errors.interestOther)}
-                  aria-describedby={
-                    errors.interestOther ? "interestOther-error" : undefined
-                  }
-                  placeholder="e.g. Cardiology research"
-                />
-                {errors.interestOther ? (
-                  <span className="field__error" id="interestOther-error">
-                    {errors.interestOther}
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="field field--full">
             <label htmlFor="goals">
-              Academic or career goals <span className="req">*</span>
+              Academic or career goals{" "}
+              <span className="field__optional">Optional</span>
             </label>
             <textarea
               id="goals"
               name="goals"
               maxLength={600}
               rows={3}
-              required
               value={values.goals}
               onChange={(event) => update("goals", event.target.value)}
-              aria-invalid={Boolean(errors.goals)}
               aria-describedby={errors.goals ? "goals-error" : "goals-hint"}
               placeholder="Tell us what you hope to achieve in medicine"
             />
@@ -690,7 +626,7 @@ export function EnquiryForm() {
               </span>
             ) : (
               <span className="field__hint" id="goals-hint">
-                A sentence or two is enough.
+                A sentence or two is enough. You can leave this blank.
               </span>
             )}
           </div>
@@ -718,6 +654,37 @@ export function EnquiryForm() {
                 {errors.parentName}
               </span>
             ) : null}
+          </div>
+
+          <div className="field">
+            <label htmlFor="parentPhone">
+              Parent / guardian phone{" "}
+              <span className="field__optional">Optional</span>
+            </label>
+            <input
+              id="parentPhone"
+              name="parentPhone"
+              type="tel"
+              autoComplete="off"
+              inputMode="tel"
+              maxLength={20}
+              value={values.parentPhone}
+              onChange={(event) => update("parentPhone", event.target.value)}
+              aria-invalid={Boolean(errors.parentPhone)}
+              aria-describedby={
+                errors.parentPhone ? "parentPhone-error" : "parentPhone-hint"
+              }
+              placeholder="98765 43210"
+            />
+            {errors.parentPhone ? (
+              <span className="field__error" id="parentPhone-error">
+                {errors.parentPhone}
+              </span>
+            ) : (
+              <span className="field__hint" id="parentPhone-hint">
+                Used only if we cannot reach the student.
+              </span>
+            )}
           </div>
 
           <div className="field field--full">

@@ -53,13 +53,14 @@ export function buildAdmissionsNotification({
 
   const allFields = studentDetailFields(enquiry, referenceId);
   const detailFieldLabels = new Set([
-    "Programme of interest",
+    "Departments of interest",
     "City / district",
     "Current college / institution",
-    "Areas of interest",
     "Academic / career goals",
     "Parent / guardian",
+    "Parent / guardian phone",
   ]);
+  const departmentLabel = enquiry.departments.join(", ");
   const enquiryFields: DetailField[] = allFields.filter((field) =>
     detailFieldLabels.has(field.label),
   );
@@ -79,7 +80,7 @@ export function buildAdmissionsNotification({
   const summary = receiptBand([
     { label: "Reference ID", value: referenceId, mono: true },
     { label: "Submitted", value: timeLabel },
-    { label: "Programme of interest", value: enquiry.programme },
+    { label: "Departments of interest", value: departmentLabel },
   ]);
 
   const contactSection = `<tr>
@@ -96,8 +97,8 @@ export function buildAdmissionsNotification({
           <div style="margin-top:5px;font-family:${SANS};font-size:13.5px;line-height:20px;"><a href="tel:+91${H(enquiry.phone)}" style="color:${EMAIL_COLORS.navy};font-weight:600;text-decoration:underline;">${H(formatIndianPhone(enquiry.phone))}</a></div>
         </td>
         <td class="contact-cell" width="33%" valign="top" style="padding:18px 20px;border-left:1px solid ${EMAIL_COLORS.line};">
-          <div style="font-family:${SANS};font-size:10px;line-height:15px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:${EMAIL_COLORS.muted};">Programme</div>
-          <div style="margin-top:5px;font-family:${SANS};font-size:13.5px;line-height:20px;color:${EMAIL_COLORS.navy};">${H(enquiry.programme)}</div>
+          <div style="font-family:${SANS};font-size:10px;line-height:15px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:${EMAIL_COLORS.muted};">Departments</div>
+          <div style="margin-top:5px;font-family:${SANS};font-size:13.5px;line-height:20px;color:${EMAIL_COLORS.navy};">${H(departmentLabel)}</div>
         </td>
       </tr>
     </table>
@@ -177,7 +178,7 @@ STUDENT CONTACT DETAILS
 Name: ${enquiry.fullName}
 Email: ${enquiry.email}
 Phone: ${formatIndianPhone(enquiry.phone)}
-Programme: ${enquiry.programme}
+Departments: ${departmentLabel}
 
 ENQUIRY DETAILS
 ${textDetailFields}

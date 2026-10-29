@@ -42,10 +42,10 @@ export const BROCHURE = {
 
 /**
  * Departments of the college and its teaching hospital, in the order the
- * institution publishes them. An enquiry names the department the candidate
- * wants to join, so this is the programme they are asking about.
+ * institution publishes them. A candidate may name more than one, because
+ * applicants often decide between two specialities.
  */
-export const PROGRAMMES = [
+export const DEPARTMENTS = [
   "General Medicine",
   "Dermatology",
   "Paediatrics",
@@ -61,42 +61,4 @@ export const PROGRAMMES = [
   "Pathology",
 ] as const;
 
-export type Programme = (typeof PROGRAMMES)[number];
-
-/**
- * The one option that is not self-describing, so the form asks the candidate to
- * say what they mean and the ledger keeps their words.
- */
-export const OTHER_INTEREST = "Others";
-
-/** The areas a candidate can say they are interested in working in. */
-export const INTERESTS = [
-  "General Medicine",
-  "Pediatrics",
-  "Dermatology",
-  "Obstetrics & Gynecology",
-  "General Surgery / Orthopedics",
-  "Radiology",
-  OTHER_INTEREST,
-] as const;
-
-export type Interest = (typeof INTERESTS)[number];
-
-/**
- * How the chosen areas read in an email or a spreadsheet cell. "Others" carries
- * the candidate's own wording, so the admissions team is never left with a bare
- * "Others" and no idea what it meant.
- */
-export function describeInterests(
-  interests: readonly string[],
-  other?: string,
-): string {
-  const detail = other?.trim() ?? "";
-  return interests
-    .map((interest) =>
-      interest === OTHER_INTEREST && detail
-        ? `${OTHER_INTEREST} (${detail})`
-        : interest,
-    )
-    .join(", ");
-}
+export type Department = (typeof DEPARTMENTS)[number];

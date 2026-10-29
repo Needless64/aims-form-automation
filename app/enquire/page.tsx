@@ -57,8 +57,8 @@ export default function EnquirePage() {
               <h1>Tell us about you.</h1>
               <p>
                 Share your details and our admissions team will review your
-                enquiry and contact you using the information you provide. Every
-                field is required.
+                enquiry and contact you using the information you provide. Fields
+                marked * are required.
               </p>
             </div>
 

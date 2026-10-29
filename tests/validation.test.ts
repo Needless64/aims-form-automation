@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEPARTMENTS } from "@/lib/institution";
 import { enquirySchema, formatFieldErrors } from "@/lib/validation";
 import { minimalRequestBody, validRequestBody } from "./fixtures";
 
@@ -6,11 +7,9 @@ const REQUIRED_FIELDS = [
   "fullName",
   "email",
   "phone",
-  "programme",
+  "departments",
   "city",
   "currentCollege",
-  "interests",
-  "goals",
   "parentName",
   "consent",
 ];
@@ -24,10 +23,10 @@ describe("enquiry validation", () => {
     expect(result.data.phone).toBe("9876543210");
     expect(result.data.city).toBe("Hyderabad");
     expect(result.data.fullName).toBe("Ananya Rao");
-    expect(result.data.programme).toBe("General Medicine");
+    expect(result.data.departments).toEqual(["General Medicine", "Radiology"]);
   });
 
-  it("requires every field in the submission", () => {
+  it("requires every mandatory field in the submission", () => {
     for (const field of REQUIRED_FIELDS) {
       const body: Record<string, unknown> = minimalRequestBody();
       delete body[field];
@@ -36,6 +35,43 @@ describe("enquiry validation", () => {
       if (result.success) continue;
       expect(Object.keys(formatFieldErrors(result.error)), field).toContain(
         field,
+      );
+    }
+  });
+
+  it("accepts an enquiry without goals or a parent phone number", () => {
+    const result = enquirySchema.safeParse(minimalRequestBody());
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.goals).toBeUndefined();
+    expect(result.data.parentPhone).toBe("");
+
+    const blank = enquirySchema.safeParse(
+      minimalRequestBody({ goals: "   ", parentPhone: "  " }),
+    );
+    expect(blank.success).toBe(true);
+    if (!blank.success) return;
+    expect(blank.data.goals).toBe("");
+    expect(blank.data.parentPhone).toBe("");
+  });
+
+  it("normalizes a parent phone number when one is given", () => {
+    const result = enquirySchema.safeParse(
+      minimalRequestBody({ parentPhone: "+91 91234 56780" }),
+    );
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.parentPhone).toBe("9123456780");
+  });
+
+  it("rejects an invalid parent phone number", () => {
+    for (const parentPhone of ["12345", "5876543210", "91234abcde"]) {
+      const result = enquirySchema.safeParse(
+        minimalRequestBody({ parentPhone }),
+      );
+      expect(result.success, parentPhone).toBe(false);
+      if (result.success) continue;
+      expect(Object.keys(formatFieldErrors(result.error))).toContain(
+        "parentPhone",
       );
     }
   });
@@ -58,7 +94,7 @@ describe("enquiry validation", () => {
   });
 
   it("rejects empty or whitespace-only required text", () => {
-    for (const field of ["fullName", "city", "currentCollege", "goals", "parentName"]) {
+    for (const field of ["fullName", "city", "currentCollege", "parentName"]) {
       const result = enquirySchema.safeParse(
         minimalRequestBody({ [field]: "   " }),
       );
@@ -74,8 +110,9 @@ describe("enquiry validation", () => {
       expect(result.success, field).toBe(false);
     }
     expect(
-      enquirySchema.safeParse(minimalRequestBody({ interests: "General Medicine" }))
-        .success,
+      enquirySchema.safeParse(
+        minimalRequestBody({ departments: "General Medicine" }),
+      ).success,
     ).toBe(false);
   });
 
@@ -108,102 +145,43 @@ describe("enquiry validation", () => {
     }
   });
 
-  it("accepts only the published departments as the programme", () => {
-    for (const programme of [
-      "General Medicine",
-      "Dermatology",
-      "Paediatrics",
-      "Respiratory Medicine",
-      "General Surgery",
-      "Orthopaedics",
-      "Obstetric & Gynaecology",
-      "Ophthalmology",
-      "Oto – Rhinolaryngology / ENT",
-      "Radiology",
-      "Anaesthesia",
-      "Biochemistry",
-      "Pathology",
-    ]) {
+  it("accepts only the published departments", () => {
+    for (const department of DEPARTMENTS) {
       expect(
-        enquirySchema.safeParse(minimalRequestBody({ programme })).success,
-        programme,
+        enquirySchema.safeParse(
+          minimalRequestBody({ departments: [department] }),
+        ).success,
+        department,
       ).toBe(true);
     }
 
-    for (const programme of ["Computer Science Engineering", "MBBS", "general medicine"]) {
+    for (const departments of [
+      ["Computer Science Engineering"],
+      ["MBBS"],
+      ["general medicine"],
+      [],
+    ]) {
       expect(
-        enquirySchema.safeParse(minimalRequestBody({ programme })).success,
-        programme,
+        enquirySchema.safeParse(minimalRequestBody({ departments })).success,
+        String(departments),
       ).toBe(false);
     }
   });
 
-  it("requires at least one area of interest from the listed values", () => {
-    expect(
-      enquirySchema.safeParse(minimalRequestBody({ interests: [] })).success,
-    ).toBe(false);
-    expect(
-      enquirySchema.safeParse(minimalRequestBody({ interests: ["Astrology"] }))
-        .success,
-    ).toBe(false);
-    expect(
-      enquirySchema.safeParse(minimalRequestBody({ interests: ["Clinical practice"] }))
-        .success,
-    ).toBe(false);
-    expect(
-      enquirySchema.safeParse(
-        minimalRequestBody({
-          interests: ["Obstetrics & Gynecology", "General Surgery / Orthopedics"],
-        }),
-      ).success,
-    ).toBe(true);
-  });
-
-  it("asks what \"Others\" means instead of recording a bare word", () => {
-    expect(
-      enquirySchema.safeParse(
-        minimalRequestBody({ interests: ["Others"] }),
-      ).success,
-    ).toBe(false);
-
-    const blankWithOthers = enquirySchema.safeParse(
-      minimalRequestBody({ interests: ["Others"], interestOther: "   " }),
-    );
-    expect(blankWithOthers.success).toBe(false);
-    if (!blankWithOthers.success) {
-      expect(
-        Object.keys(formatFieldErrors(blankWithOthers.error)),
-      ).toContain("interestOther");
-    }
-
-    const described = enquirySchema.safeParse(
+  it("accepts several departments in one enquiry", () => {
+    const result = enquirySchema.safeParse(
       minimalRequestBody({
-        interests: ["General Medicine", "Others"],
-        interestOther: "  Cardiology   research ",
+        departments: ["Dermatology", "Paediatrics", "Radiology"],
       }),
     );
-    expect(described.success).toBe(true);
-    if (described.success) {
-      expect(described.data.interestOther).toBe("Cardiology research");
-    }
-  });
-
-  it("ignores the \"Others\" description when that option is not chosen", () => {
-    const result = enquirySchema.safeParse(
-      minimalRequestBody({ interests: ["Radiology"], interestOther: "Oncology" }),
-    );
     expect(result.success).toBe(true);
-  });
-
-  it("caps the \"Others\" description", () => {
-    expect(
-      enquirySchema.safeParse(
-        minimalRequestBody({
-          interests: ["Others"],
-          interestOther: "x".repeat(81),
-        }),
-      ).success,
-    ).toBe(false);
+    if (result.success) {
+      expect(result.data.departments).toEqual([
+        "Dermatology",
+        "Paediatrics",
+        "Radiology",
+      ]);
+    }
   });
 
   it("rejects overlong text", () => {
@@ -227,6 +205,15 @@ describe("enquiry validation", () => {
     ).toBe(false);
   });
 
+  it("allows goals of any length up to the cap, including none", () => {
+    for (const goals of ["", "A", "x".repeat(600)]) {
+      expect(
+        enquirySchema.safeParse(minimalRequestBody({ goals })).success,
+        String(goals.length),
+      ).toBe(true);
+    }
+  });
+
   it("maps issues to a field -> first-error map", () => {
     const result = enquirySchema.safeParse({});
     expect(result.success).toBe(false);
@@ -235,8 +222,8 @@ describe("enquiry validation", () => {
     expect(errors.fullName).toMatch(/full name/i);
     expect(errors.email).toMatch(/email/i);
     expect(errors.phone).toMatch(/mobile/i);
-    expect(errors.programme).toMatch(/programme/i);
+    expect(errors.departments).toMatch(/department/i);
     expect(errors.consent).toMatch(/consent/i);
-    expect(Object.keys(errors).length).toBeGreaterThanOrEqual(10);
+    expect(Object.keys(errors).length).toBeGreaterThanOrEqual(8);
   });
 });

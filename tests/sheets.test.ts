@@ -99,26 +99,38 @@ describe("spreadsheet row", () => {
     );
     // No leading "+": Sheets would read it as a formula and show #ERROR!.
     expect(row[SHEET_COLUMNS.indexOf("Mobile number")]).toBe("91 98765 43210");
-    expect(row[SHEET_COLUMNS.indexOf("Programme of interest")]).toBe(
-      "General Medicine",
-    );
-    expect(row[SHEET_COLUMNS.indexOf("Areas of interest")]).toBe(
+    expect(row[SHEET_COLUMNS.indexOf("Departments of interest")]).toBe(
       "General Medicine, Radiology",
+    );
+    expect(row[SHEET_COLUMNS.indexOf("Parent / guardian phone")]).toBe(
+      "91 91234 56780",
     );
     expect(row[SHEET_COLUMNS.indexOf("Consent to be contacted")]).toBe("Yes");
   });
 
-  it("keeps the candidate's own words when they pick \"Others\"", () => {
+  it("leaves the optional cells empty rather than writing a placeholder", () => {
     const row = sheetRow({
       ...input,
       enquiry: {
         ...validEnquiry,
-        interests: ["Dermatology", "Others"],
-        interestOther: "Cardiology research",
+        goals: undefined,
+        parentPhone: "",
       },
     });
-    expect(row[SHEET_COLUMNS.indexOf("Areas of interest")]).toBe(
-      "Dermatology, Others (Cardiology research)",
+    expect(row[SHEET_COLUMNS.indexOf("Academic or career goals")]).toBe("");
+    expect(row[SHEET_COLUMNS.indexOf("Parent / guardian phone")]).toBe("");
+  });
+
+  it("writes several chosen departments into one cell", () => {
+    const row = sheetRow({
+      ...input,
+      enquiry: {
+        ...validEnquiry,
+        departments: ["Dermatology", "Paediatrics", "Radiology"],
+      },
+    });
+    expect(row[SHEET_COLUMNS.indexOf("Departments of interest")]).toBe(
+      "Dermatology, Paediatrics, Radiology",
     );
   });
 

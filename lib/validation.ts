@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { INTERESTS, OTHER_INTEREST, PROGRAMMES } from "@/lib/institution";
+import { DEPARTMENTS } from "@/lib/institution";
 
 export const HONEYPOT_FIELD = "companyWebsite";
 
@@ -86,14 +86,33 @@ const phoneField = z
       }),
   );
 
+/**
+ * A second phone number is a convenience, not a condition of enquiry: absent or
+ * blank is accepted, but anything typed must be a real Indian mobile number.
+ */
+const optionalPhoneField = z
+  .string({ error: "Please enter a valid mobile number." })
+  .trim()
+  .max(20, { error: "Please enter a valid mobile number." })
+  .optional()
+  .transform((value) => (value ? normalizePhone(value) : ""))
+  .refine((value) => value === "" || /^[6-9]\d{9}$/.test(value), {
+    error: "Enter a valid 10-digit Indian mobile number.",
+  });
+
 export const enquirySchema = z
   .object({
     fullName: nameField("the student's full name"),
     email: emailField,
     phone: phoneField,
-    programme: z.enum(PROGRAMMES, {
-      error: "Please select the programme you are interested in.",
-    }),
+    departments: z
+      .array(z.enum(DEPARTMENTS, { error: "Select a valid department." }), {
+        error: "Select at least one department.",
+      })
+      .min(1, { error: "Select at least one department." })
+      .max(DEPARTMENTS.length, {
+        error: "Select only the listed departments.",
+      }),
     city: requiredText({
       label: "your current city or district",
       max: 80,
@@ -106,48 +125,27 @@ export const enquirySchema = z
       pattern: PLACE_PATTERN,
       patternError: "Enter a valid college or institution name.",
     }),
-    interests: z
-      .array(z.enum(INTERESTS, { error: "Select a valid area of interest." }), {
-        error: "Select at least one area of interest.",
-      })
-      .min(1, { error: "Select at least one area of interest." })
-      .max(INTERESTS.length, {
-        error: "Select only the listed areas of interest.",
-      }),
     /**
-     * The candidate's own words when they pick "Others". Optional on its own —
-     * the rule below makes it required for that one choice.
+     * A candidate may leave this blank — not everyone has a plan in words yet —
+     * but anything written is still capped and checked for control characters.
      */
-    interestOther: z
-      .string({ error: "Tell us your other area of interest." })
+    goals: z
+      .string({ error: "Please describe your academic or career goals." })
       .trim()
-      .max(80, {
-        error: "Describe your other area of interest in 80 characters or fewer.",
+      .max(600, {
+        error: "Academic or career goals must be 600 characters or fewer.",
       })
-      .refine((value) => !CONTROL_CHARS.test(value), {
-        error: "Your other area of interest contains invalid characters.",
-      })
+      .refine(
+        (value) => !/[\u0000-\u0008\u000b-\u001f\u007f]/.test(value),
+        { error: "Academic or career goals contain invalid characters." },
+      )
       .transform((value) => value.replace(/[ \t]+/g, " "))
       .optional(),
-    goals: requiredText({
-      label: "your academic or career goals",
-      max: 600,
-      min: 10,
-      allowNewlines: true,
-    }),
     parentName: nameField("your parent or guardian's name"),
+    parentPhone: optionalPhoneField,
     consent: z.literal(true, {
       error: "Please consent to be contacted about your enquiry.",
     }),
-  })
-  .superRefine((value, ctx) => {
-    if (!value.interests.includes(OTHER_INTEREST)) return;
-    if ((value.interestOther ?? "").length >= 2) return;
-    ctx.addIssue({
-      code: "custom",
-      path: ["interestOther"],
-      message: "Tell us your other area of interest.",
-    });
   });
 
 export type Enquiry = z.infer<typeof enquirySchema>;
