@@ -30,17 +30,6 @@ export const INSTITUTION = {
 } as const;
 
 /**
- * Institute brochure served from /public. Keep pages/sizeLabel in step with the
- * file at BROCHURE.href — they are shown to visitors before they download it.
- */
-export const BROCHURE = {
-  href: "/documents/aims-brochure.pdf",
-  fileName: "AIMS-Brochure.pdf",
-  pages: 16,
-  sizeLabel: "4.1 MB",
-} as const;
-
-/**
  * Departments of the college and its teaching hospital, in the order the
  * institution publishes them. A candidate may name more than one, because
  * applicants often decide between two specialities.

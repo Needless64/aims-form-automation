@@ -9,7 +9,7 @@ Built with Next.js 16 (App Router), React 19, TypeScript, Zod, and Nodemailer ov
 ## What is implemented
 
 - AIMS-branded responsive landing page using the official AIMS logo and campus imagery, with a minimal card-based layout and all enquiry CTAs pointing to the dedicated form page.
-- Four quick-link tiles under the hero — brochure, Instagram, admissions phone, campus map — plus a video section of four YouTube films about AIMS and the Arundathi Hospital.
+- Three quick-link tiles under the hero — Instagram, admissions phone, campus map — plus a video section of four YouTube films about AIMS and the Arundathi Hospital.
 - Dedicated `/enquire` page set over the Arundathi Hospital photograph, with the form on a blue glass-morphism surface, a submit loading overlay, and an animated confirmation (drawn checkmark, pulsing ring, staggered reveal) that scrolls itself into view and then returns the visitor to the home page after 10 seconds, on phones as well as desktops.
 - Institutional facts limited to verified information: established 2023, KNRUHS affiliation, NMC approval, counselling code AIMD, Dundigal campus.
 - Dedicated `/enquire` page with the admissions form: mandatory and optional medical-college-appropriate fields, client-side validation, server-side validation, and preserved values on failure.
@@ -22,7 +22,6 @@ Built with Next.js 16 (App Router), React 19, TypeScript, Zod, and Nodemailer ov
 - Partial-failure handling: a success response is returned only when **both** email requests are accepted by the provider.
 - Admin-protected retry endpoint that retries only the failed leg and never re-sends an accepted email.
 - Every field is strictly typed: text fields reject markup characters, phone numbers must be 10-digit Indian mobiles, and every selected department must be one of the published ones. A candidate may choose several departments; goals and the parent/guardian phone number are optional. The form is postgraduate-only: no undergraduate qualification, marks or NEET-UG fields are collected or recorded.
-- **Brochure tile**: on a desktop browser the PDF opens in the browser's own viewer in a new tab; on phones and tablets the same tile hands the file to the device download manager (`download` attribute, same-origin) with the file size and page count shown before the tap. The web copy is 4.1 MB rather than the 21.6 MB source export, with images capped at 96 dpi and re-encoded at JPEG quality 82 (visually equivalent at reading size).
 - **Video section**: click-to-play cards for four publicly embeddable YouTube videos, each opening an accessible modal (`role="dialog"`, focus trap, Escape and backdrop close, scroll lock) that loads the privacy-enhanced `youtube-nocookie.com` player and links back to YouTube. On phones the cards become a snap-scrolling row.
 - Instagram profile linked from the network tile; the LinkedIn company page remains linked from the footer.
 - 163 automated tests with the SMTP transport mocked and the GitHub dispatch stubbed.
@@ -39,7 +38,6 @@ app/
   api/admissions/retry/route.ts  Admin-only failed-leg retry
 components/
   SiteHeader.tsx  SiteFooter.tsx  EnquiryForm.tsx
-  BrochureTile.tsx               Brochure tile; opens on desktop, downloads on phones
   VideoWall.tsx                  Video cards and the click-to-play modal
 lib/
   institution.ts                 Verified institutional facts and form options
@@ -60,7 +58,6 @@ lib/
       admissions-notification.ts
 public/images/                   Official AIMS logo and campus imagery
 public/images/videos/            Video card thumbnails (one per YouTube id)
-public/documents/aims-brochure.pdf   Web copy of the institute brochure (16 pages, 4.1 MB)
 tests/                           Vitest suite
 ```
 
@@ -593,7 +590,6 @@ Only after the sending mailbox is configured:
 - **Retry after a partial failure is staff-initiated**, not available to the student, because resubmitting the form could duplicate the email leg that already succeeded.
 - The in-memory store contains personal data for 48 hours in process memory. Logs contain the reference ID and per-leg statuses only — no name, email, phone, or message bodies.
 - Email templates use table layouts, inline CSS, and mobile media queries. Dark-mode rendering varies by client; content remains readable.
-- **The brochure is a web-optimized copy.** `public/documents/aims-brochure.pdf` was produced from the 21.6 MB source export by capping embedded images at 96 dpi and re-encoding at JPEG quality 82, which keeps the pages visually equivalent at reading size while cutting the download to 4.1 MB. Replace it and the tile still works; update `BROCHURE.pages`/`sizeLabel` in `lib/institution.ts` (a test asserts they match the file).
 - **Video playback is third-party.** The modal loads the YouTube player from `youtube-nocookie.com`, so it needs network access and is subject to YouTube's embed and regional rules. Thumbnails are stored locally, so the section still looks right if the player is blocked.
 - **Deployed** at https://qr-aims.pages.dev on Cloudflare Pages, with the mail sent by the runner in `Needless64/aims-form-automation`.
 
@@ -614,7 +610,6 @@ Only after the sending mailbox is configured:
 - Programme list: AIMS admits postgraduate medical students, so the enquiry form offers the thirteen departments published by the institution (General Medicine through Pathology). No fees, seat counts, rankings, placements, scholarships, or facilities claims were invented.
 - Instagram profile: https://www.instagram.com/aimsmedicalcollege/
 - LinkedIn company page: https://www.linkedin.com/company/arundathi-institute-of-medical-sciences/
-- Brochure PDF: supplied institute brochure (source export `aims-brochure.pdf`), published under `/documents/aims-brochure.pdf`.
 - Videos in the "Arundathi, on video" section are third-party coverage, credited on each card and never restated as AIMS claims:
   - `UmqXB4K0QdU` — "Arundathi Institute of Medical Sciences Telangana | MBBS Admission 2026 | Fees, Cutoff & Counselling", Admission Today.
   - `gU26HOKj-ZM` — "Arundhathi Institute of Medical Sciences Medchal | Closing Ranks, Fees, Courses, Intake & Facilities", Edu9 Career Guidance.

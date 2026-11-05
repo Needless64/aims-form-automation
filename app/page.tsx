@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BrochureTile } from "@/components/BrochureTile";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { VideoWall } from "@/components/VideoWall";
@@ -198,7 +197,6 @@ export default function HomePage() {
         </section>
 
         <section className="container quick-links" aria-label="Quick links">
-          <BrochureTile />
           <QuickLink
             tone="instagram"
             eyebrow="Network"

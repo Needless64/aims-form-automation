@@ -2,7 +2,6 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { inflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { BROCHURE } from "@/lib/institution";
 import { VIDEOS } from "@/lib/videos";
 
 const publicFile = (relative: string) =>
@@ -69,28 +68,6 @@ function readPng(path: string) {
     opaque: (x: number, y: number) => pixels[(y * width + x) * channels + 3] > 100,
   };
 }
-
-describe("brochure", () => {
-  it("ships the PDF that the tile links to", () => {
-    const file = publicFile(BROCHURE.href);
-    expect(BROCHURE.href.endsWith(".pdf")).toBe(true);
-    expect(existsSync(file)).toBe(true);
-  });
-
-  it("keeps the PDF small enough to download on a phone", () => {
-    const { size } = statSync(publicFile(BROCHURE.href));
-    expect(size).toBeGreaterThan(0);
-    expect(size).toBeLessThan(8 * 1024 * 1024);
-  });
-
-  it("states a page count and a size that match the file", () => {
-    const { size } = statSync(publicFile(BROCHURE.href));
-    expect(BROCHURE.pages).toBeGreaterThan(0);
-    expect(BROCHURE.sizeLabel).toMatch(/^\d+(\.\d)? MB$/);
-    expect(Math.abs(size / 1024 / 1024 - Number.parseFloat(BROCHURE.sizeLabel))).toBeLessThan(0.1);
-    expect(BROCHURE.fileName).toMatch(/\.pdf$/);
-  });
-});
 
 describe("crested emblem", () => {
   const file = publicFile("/images/aims-emblem.png");

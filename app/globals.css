@@ -593,7 +593,7 @@ textarea {
 
 .quick-links {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   padding-bottom: 16px;
 }
@@ -652,10 +652,6 @@ textarea {
   opacity: 1;
 }
 
-.quick--gold {
-  background: linear-gradient(152deg, #fdf6e7 0%, #f7e5bd 100%);
-}
-
 .quick--azure {
   background: linear-gradient(152deg, #ecf5fe 0%, #d6e7fb 100%);
 }
@@ -672,10 +668,6 @@ textarea {
    peach, light enough for the navy headline to stay legible. */
 .quick--instagram {
   background: linear-gradient(152deg, #fbf0fa 0%, #f9e1ef 55%, #fbe8de 100%);
-}
-
-.quick--gold::before {
-  background: linear-gradient(152deg, #fbe8bf 0%, #f1d597 100%);
 }
 
 .quick--azure::before {
@@ -714,11 +706,6 @@ textarea {
   border-color: transparent;
 }
 
-.quick--gold:hover .quick__icon {
-  background-color: #b5821b;
-  box-shadow: 0 16px 26px -18px rgba(181, 130, 27, 0.85);
-}
-
 .quick--azure:hover .quick__icon {
   background-color: #18568f;
   box-shadow: 0 16px 26px -18px rgba(24, 86, 143, 0.85);
@@ -747,10 +734,6 @@ textarea {
 .quick__icon svg {
   width: 20px;
   height: 20px;
-}
-
-.quick--gold .quick__icon {
-  color: var(--gold-ink);
 }
 
 .quick--azure .quick__icon {
@@ -798,10 +781,6 @@ textarea {
   color: var(--navy);
 }
 
-.quick--gold .quick__action {
-  color: var(--gold-ink);
-}
-
 .quick--azure .quick__action {
   color: #1b5f9e;
 }
@@ -823,11 +802,6 @@ textarea {
 
 .quick:hover .quick__action svg {
   transform: translateX(3px);
-}
-
-.quick--brochure .quick__meta {
-  color: var(--gold-ink);
-  opacity: 0.82;
 }
 
 /* --------------------------------------------------------------- discover */
@@ -2776,11 +2750,6 @@ textarea {
 /* ------------------------------------------------------------- responsive */
 
 @media (max-width: 1020px) {
-  .quick-links {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-  }
-
   .video-row {
     grid-auto-flow: row;
     grid-template-columns: repeat(2, minmax(0, 1fr));
