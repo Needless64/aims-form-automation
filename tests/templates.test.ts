@@ -33,10 +33,10 @@ describe("student confirmation email", () => {
     expect(studentEmail.html).toContain("Welcome, Ananya Rao!");
     expect(studentEmail.html).toContain("ananya.rao@example.com");
     expect(studentEmail.html).toContain("+91 98765 43210");
-    expect(studentEmail.html).toContain("General Medicine");
+    expect(studentEmail.html).toContain("MD General Medicine");
     expect(studentEmail.html).toContain("Hyderabad");
     expect(studentEmail.html).toContain("Osmania Medical College");
-    expect(studentEmail.html).toContain("General Medicine, Radiology");
+    expect(studentEmail.html).toContain("MD General Medicine, MD Pathology");
     expect(studentEmail.html).toContain("serve rural communities");
     expect(studentEmail.html).toContain(referenceId);
   });
@@ -116,9 +116,9 @@ describe("internal admissions notification", () => {
     expect(admissionsEmail.html).toContain("Ananya Rao");
     expect(admissionsEmail.html).toContain("ananya.rao@example.com");
     expect(admissionsEmail.html).toContain("+91 98765 43210");
-    expect(admissionsEmail.html).toContain("General Medicine");
+    expect(admissionsEmail.html).toContain("MD General Medicine");
     expect(admissionsEmail.html).toContain("Hyderabad");
-    expect(admissionsEmail.html).toContain("Radiology");
+    expect(admissionsEmail.html).toContain("MD Pathology");
     expect(admissionsEmail.html).toContain("serve rural communities");
     expect(admissionsEmail.html).toContain("Suresh Rao");
     expect(admissionsEmail.html).toContain(

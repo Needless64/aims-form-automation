@@ -35,19 +35,16 @@ export const INSTITUTION = {
  * applicants often decide between two specialities.
  */
 export const DEPARTMENTS = [
-  "General Medicine",
-  "Dermatology",
-  "Paediatrics",
-  "Respiratory Medicine",
-  "General Surgery",
-  "Orthopaedics",
-  "Obstetric & Gynaecology",
-  "Ophthalmology",
-  "Oto – Rhinolaryngology / ENT",
-  "Radiology",
-  "Anaesthesia",
-  "Biochemistry",
-  "Pathology",
+  "MD Dermatology",
+  "MD General Medicine",
+  "MD Paediatrics",
+  "MD Anesthesiology",
+  "MD Biochemistry",
+  "MD Pathology",
+  "MS Obstetrics and Gynaecology",
+  "MS Orthopedics",
+  "MS General Surgery",
+  "MS Ophthalmology",
 ] as const;
 
 export type Department = (typeof DEPARTMENTS)[number];

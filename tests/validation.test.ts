@@ -23,7 +23,10 @@ describe("enquiry validation", () => {
     expect(result.data.phone).toBe("9876543210");
     expect(result.data.city).toBe("Hyderabad");
     expect(result.data.fullName).toBe("Ananya Rao");
-    expect(result.data.departments).toEqual(["General Medicine", "Radiology"]);
+    expect(result.data.departments).toEqual([
+      "MD General Medicine",
+      "MD Pathology",
+    ]);
   });
 
   it("requires every mandatory field in the submission", () => {
@@ -111,7 +114,7 @@ describe("enquiry validation", () => {
     }
     expect(
       enquirySchema.safeParse(
-        minimalRequestBody({ departments: "General Medicine" }),
+        minimalRequestBody({ departments: "MD General Medicine" }),
       ).success,
     ).toBe(false);
   });
@@ -171,15 +174,15 @@ describe("enquiry validation", () => {
   it("accepts several departments in one enquiry", () => {
     const result = enquirySchema.safeParse(
       minimalRequestBody({
-        departments: ["Dermatology", "Paediatrics", "Radiology"],
+        departments: ["MD Dermatology", "MD Paediatrics", "MD Biochemistry"],
       }),
     );
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.departments).toEqual([
-        "Dermatology",
-        "Paediatrics",
-        "Radiology",
+        "MD Dermatology",
+        "MD Paediatrics",
+        "MD Biochemistry",
       ]);
     }
   });

@@ -607,7 +607,7 @@ Only after the sending mailbox is configured:
 
 - Institutional identity, logo, campus and hospital imagery: https://www.aims.ac.in/
 - Counselling code AIMD, admissions phone `9000994842`, and `admissions@aims.ac.in`: supplied admissions details for 2026–27.
-- Programme list: AIMS admits postgraduate medical students, so the enquiry form offers the thirteen departments published by the institution (General Medicine through Pathology). No fees, seat counts, rankings, placements, scholarships, or facilities claims were invented.
+- Programme list: AIMS admits postgraduate medical students, so the enquiry form offers the ten postgraduate departments published by the institution (MD Dermatology through MS Ophthalmology), listed in `lib/institution.ts`. No fees, seat counts, rankings, placements, scholarships, or facilities claims were invented.
 - Instagram profile: https://www.instagram.com/aimsmedicalcollege/
 - LinkedIn company page: https://www.linkedin.com/company/arundathi-institute-of-medical-sciences/
 - Videos in the "Arundathi, on video" section are third-party coverage, credited on each card and never restated as AIMS claims:

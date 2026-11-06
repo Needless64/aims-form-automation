@@ -100,7 +100,7 @@ describe("spreadsheet row", () => {
     // No leading "+": Sheets would read it as a formula and show #ERROR!.
     expect(row[SHEET_COLUMNS.indexOf("Mobile number")]).toBe("91 98765 43210");
     expect(row[SHEET_COLUMNS.indexOf("Departments of interest")]).toBe(
-      "General Medicine, Radiology",
+      "MD General Medicine, MD Pathology",
     );
     expect(row[SHEET_COLUMNS.indexOf("Parent / guardian phone")]).toBe(
       "91 91234 56780",
@@ -126,11 +126,11 @@ describe("spreadsheet row", () => {
       ...input,
       enquiry: {
         ...validEnquiry,
-        departments: ["Dermatology", "Paediatrics", "Radiology"],
+        departments: ["MD Dermatology", "MD Paediatrics", "MD Pathology"],
       },
     });
     expect(row[SHEET_COLUMNS.indexOf("Departments of interest")]).toBe(
-      "Dermatology, Paediatrics, Radiology",
+      "MD Dermatology, MD Paediatrics, MD Pathology",
     );
   });
 
